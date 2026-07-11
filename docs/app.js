@@ -82,7 +82,6 @@ function renderAiResponse(aiObj) {
 // Export für andere Module
 window.App = {
     solveWithAI,
-    solveStoffmengeWithAI,
     initialize: initializeEventListeners
 };
 
