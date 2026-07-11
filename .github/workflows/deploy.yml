@@ -2,14 +2,78 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main  # Ändere bei Bedarf auf deinen Hauptbranch
+  workflow_dispatch:  # Ermöglicht manuelles Deploy
+
+permissions:
+  pages: write  # Erforderlich für GitHub Pages Deployment
+  contents: read  # Für Zugriff auf Repository-Inhalt
+
+concurrency:
+  group: deploy-group  # Verhindert gleichzeitige Deploy-Aktionen
+  cancel-in-progress: true  # Stellt laufende Deploy-Aktionen ein
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages  # Umgebungsname für Traceability
+
     steps:
-      - uses: actions/checkout@v4
+      # 1. Optional: Cancelling previous deployments
+      - name: Cancel previous deploy
+        id: cancel
+        uses: ahenschel/cancel-previous-actions@v1
+        with:
+          on-failure: cancel-job  # Cancelt auch bei Fehlern
+
+      # 2. Code checkout
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Lädt auch Branchenhistorie
+
+      # 3. Setup Pages (optional, aber empfohlen)
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        with:
+          auto-deploy-branch: main  # Deaktiviert automatisches Deploy auf GitHub-Seiten
+
+      # 4. Optional: Build-Schritt (falls du z.B. SASS/JS kompilieren musst)
+      # - name: Build
+      #   run: |
+      #     npm install
+      #     npm run build  # Passe dies an deine Build-Befehl an
+      #     cp -r build/* docs/  # Übertrage gebaute Dateien
+
+      # 5. Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
         with:
-          site_dir: 'docs'
+          site_dir: 'docs'  # Ordner mit HTML/CSS/JS
+          branch: gh-pages  # Ziel-Branch (Standard für GitHub Pages)
+
+      # 6. Benachrichtigungen
+      - name: Success notification
+        if: success()  # Benachrichtigung bei Erfolg
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue?.number,
+              repository_id: context.payload.repository.id,
+              body: '✅ Website wurde erfolgreich deployt! 🎉'
+            })
+
+      - name: Failure notification
+        if: failure()  # Benachrichtigung bei Fehler
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue?.number,
+              repository_id: context.payload.repository.id,
+              body: '❌ Deployment fehlgeschlagen! (Fehler: {{ steps.deployment.outcome }})'
+            })
