@@ -11,10 +11,10 @@
         <h1>Chemie-Hausaufgaben-Helfer</h1>
         <nav>
             <ul>
-                <li><a href="#stoffmenge" aria-label="Calculator for Stoffmenge">Stoffmenge</a></li>
-                <li><a href="#element" aria-label="Element Overview">Elemente</a></li>
-                <li><a href="#chemische-regeln" aria-label="Chemical Rules">Stoffgesetze</a></li>
-                <li><a href="#kiai" aria-label="Solve with AI">KI-Lösung</a></li>
+                <li><a href="#stoffmenge" aria-label="Stoffmenge-Rechner">Stoffmenge</a></li>
+                <li><a href="#element" aria-label="Periodensystem">Periodensystem</a></li>
+                <li><a href="#chemische-regeln" aria-label="Chemische Regeln">Stoffgesetze</a></li>
+                <li><a href="#kiai" aria-label="KI-Lösung">KI-Lösung</a></li>
             </ul>
         </nav>
     </header>
@@ -24,6 +24,10 @@
         <section id="stoffmenge" aria-labelledby="stoffmenge-title">
             <h2 id="stoffmenge-title">Stoffmenge Rechner</h2>
             <div class="calculator-section">
+                <label for="stoffmenge-formula">Chemische Formel (z. B. H₂O, H₂SO₄, CaCO₃):</label>
+                <input type="text" id="stoffmenge-formula" placeholder="H2O" autocomplete="off" spellcheck="false">
+                <div id="formula-feedback" class="formula-feedback"></div>
+
                 <label for="stoffmenge-mass">Masse (g):</label>
                 <input type="number" id="stoffmenge-mass" min="0" step="0.01" required>
                 <label for="stoffmenge-molar-mass">Molare Masse (g·mol⁻¹):</label>
@@ -31,34 +35,18 @@
                 <button id="stoffmenge-calculate" onclick="StoffmengeCalculator.calculate()">Berechnen</button>
                 <div id="stoffmenge-result"></div>
                 <button id="stoffmenge-invert" onclick="StoffmengeCalculator.invert()">Invertieren (n→m)</button>
-                <button onclick="solveWithAI()">KI-Lösung anfordern</button>
             </div>
         </section>
 
-        <!-- Element Overview -->
+        <!-- Periodensystem -->
         <section id="element" aria-labelledby="element-title">
-            <h2 id="element-title">Element Überblick</h2>
-            <div id="element-deck" class="element-deck">
-                <div class="element-card">
-                    <h3>Wasserstoff (H)</h3>
-                    <div class="data">
-                        <p><strong>Symbol:</strong> H</p>
-                        <p><strong>Atomzahl:</strong> 1</p>
-                        <p><strong>Atommasse:</strong> 1.008 g·mol⁻¹</p>
-                    </div>
-                </div>
-                <div class="element-card">
-                    <h3>Sauerstoff (O)</h3>
-                    <div class="data">
-                        <p><strong>Symbol:</strong> O</p>
-                        <p><strong>Atomzahl:</strong> 8</p>
-                        <p><strong>Atommasse:</strong> 16.00 g·mol⁻¹</p>
-                        <p><em>Häufigste Verbindungen:</em> H₂O, CO₂, O₂</p>
-                    </div>
-                </div>
-            </div>
-            <button onclick="loadMoreElements()">Weitere Elemente laden</button>
+            <h2 id="element-title">Periodensystem der Elemente</h2>
+            <p class="hint">Klicke auf ein Element, um einen kleinen Fakt zu sehen.</p>
+            <div id="periodic-table" class="periodic-table"></div>
             <div id="element-detail"></div>
+
+            <h3 class="subsection">Schnellübersicht: erste drei Perioden (H–Ar)</h3>
+            <div id="expanded-elements" class="element-card-grid"></div>
         </section>
 
         <!-- Chemical Rules -->
@@ -68,7 +56,7 @@
                 <div class="rule-card">
                     <h3>Stöchiometrische Gleichung</h3>
                     <p>aA + bB → cC + dD</p>
-                    <p><em>Coeffizienten geben molare Verhältnisse an</em></p>
+                    <p><em>Koeffizienten geben molare Verhältnisse an</em></p>
                 </div>
                 <div class="rule-card">
                     <h3>pH-Berechnung</h3>
@@ -77,19 +65,38 @@
                 </div>
                 <div class="rule-card">
                     <h3>Gasgesetze</h3>
-                    <p>pv = nRT</p>
-                    <p>R = 0.0821 L·bar/(mol·K)</p>
+                    <p>pV = nRT</p>
+                    <p>R = 0.08314 L·bar/(mol·K)</p>
                 </div>
             </div>
         </section>
 
-        <!-- KI-Solve Section -->
+        <!-- KI-Lösung Section -->
         <section id="kiai" aria-labelledby="kiai-title">
             <h2 id="kiai-title">KI-Lösung anfordern</h2>
+
+            <div class="ai-settings">
+                <label class="ai-check"><input type="checkbox" id="use-ai" checked> KI verwenden (OpenAI)</label>
+                <label for="api-key">OpenAI API-Key:</label>
+                <input type="password" id="api-key" placeholder="sk-... (wird nicht gespeichert)">
+                <label for="model">Modell:</label>
+                <select id="model">
+                    <option value="gpt-4o" selected>gpt-4o</option>
+                    <option value="gpt-4">gpt-4</option>
+                    <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                </select>
+            </div>
+
             <p>Gib eine chemische Aufgabe ein und lass die KI sie lösen:</p>
             <textarea id="ai-problem" rows="4" placeholder="z.B. Wie viele Mol sind in 18 g Wasser?"></textarea>
             <button id="ai-solve-btn" onclick="solveWithAI()">Lösung anfordern</button>
             <pre id="ai-answer"></pre>
+        </section>
+
+        <!-- Interaktives Chemie-Quiz -->
+        <section id="quiz" aria-labelledby="quiz-title">
+            <h2 id="quiz-title">Interaktives Chemie‑Quiz</h2>
+            <div id="quiz-container" class="quiz"></div>
         </section>
     </main>
 
@@ -97,5 +104,7 @@
     <script src="calculator-stoffmenge.js"></script>
     <script src="element-overview.js"></script>
     <script src="rules-library.js"></script>
+    <script src="quiz.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

@@ -11,9 +11,9 @@ function initializeEventListeners() {
     modelSelect = document.getElementById('model');
 }
 
-function solveWithAI(problemText) {
+function solveWithAI(problemText, outputEl) {
     const problem = typeof problemText === 'string' ? problemText : document.getElementById('ai-problem').value.trim();
-    const answerEl = document.getElementById('ai-answer');
+    const answerEl = outputEl || document.getElementById('ai-answer');
 
     if (!problem) {
         answerEl.textContent = 'Bitte eine Aufgabe eingeben.';
@@ -28,7 +28,7 @@ function solveWithAI(problemText) {
         return;
     }
 
-    answerEl.textContent = 'Frage KI an... (kann einige Sekunden dauern)';
+    answerEl.innerHTML = '<span class="spinner"></span> KI wird angefragt…';
 
     window.AISolver.solve(problem, key, model)
         .then(response => {
@@ -42,21 +42,6 @@ function solveWithAI(problemText) {
         .catch(err => {
             answerEl.textContent = `Fehler bei KI-Anfrage: ${err.message}. Lokale Heuristik nicht verfügbar.`;
         });
-}
-
-function solveStoffmengeWithAI() {
-    const mass = document.getElementById('stoffmenge-mass').value;
-    const molarMass = document.getElementById('stoffmenge-molar-mass').value;
-
-    if (!mass || !molarMass) {
-        document.getElementById('stoffmenge-result').textContent = 'Bitte Masse und Molare Masse eingeben.';
-        return;
-    }
-
-    const prompt = `Wie viele Mol sind in ${mass} g eines Stoffes mit einer Molaren Masse von ${molarMass} g·mol⁻¹?
-    Bitte Schritt für Schritt rechnen und die Einheiten prüfen.`;
-
-    solveWithAI(prompt);
 }
 
 // Render KI-Antwort
