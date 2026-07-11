@@ -1,16 +1,129 @@
-:root{--bg:#f6f8fb;--card:#fff;--accent:#1b6eff;--text:#0b1a2b}
-*{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
-body{margin:0;background:var(--bg);color:var(--text);padding:24px}
-main{max-width:900px;margin:0 auto;background:var(--card);padding:24px;border-radius:10px;box-shadow:0 6px 20px rgba(11,26,43,.06)}
-h1{margin-top:0}
-textarea{width:100%;padding:12px;border:1px solid #dce7ff;border-radius:6px;font-size:14px}
-.ai-row,.ai-note{margin-top:10px}
-.ai-row{display:grid;gap:6px}
-.ai-note{font-size:13px;color:#56627a;line-height:1.4}
-.controls{margin:12px 0}
-button{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:6px;font-weight:600;cursor:pointer}
-button#clear{background:#7c8796;margin-left:8px}
-section{margin-top:18px}
-pre{background:#f4f6fb;padding:14px;border-radius:8px;white-space:pre-wrap}
-footer{margin-top:18px;color:#56627a;font-size:13px}
-label{display:block;margin-bottom:8px;font-weight:600}
+:root {
+  --bg: #f6f8fb;
+  --card: #fff;
+  --accent: #1b6eff;
+  --text: #0b1a2b;
+  --error: #dc3545;
+  --success: #28a745;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  padding: 24px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+h1, h2, h3 {
+  color: var(--accent);
+}
+
+main.card-grid {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  padding: 24px;
+  background: var(--card);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(11, 26, 43, 0.06);
+}
+
+section {
+  background: transparent;
+}
+
+.calculator-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+input, button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #dce7ff;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button#ai-solve-btn, button#stoffmenge-calculate, button#element-detail-button {
+  background: var(--accent);
+}
+
+button#clear, button#stoffmenge-invert {
+  background: #7c8796;
+}
+
+button:hover, input:focus {
+  transform: translateY(-1px);
+}
+
+footer {
+  margin-top: 24px;
+  color: #56627a;
+  font-size: 0.9rem;
+}
+
+.rules-library .formula-item {
+  margin-bottom: 8px;
+}
+
+.rules-library .rule-card {
+  margin: 16px 0;
+  padding: 16px;
+  border-radius: 8px;
+  background: #f4f6fb;
+}
+
+@media (max-width: 768px) {
+  main.card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calculator-section {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .element-deck {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .element-card {
+    max-width: 100%;
+  }
+
+  button #ai-solve-btn, button# AI SOLVER START
+  button#ai-solve-btn {
+    margin-top: 12px;
+  }
+</style>

@@ -1,52 +1,101 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Chemie Hausaufgaben Helfer</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chemie-Hausaufgaben-Helfer</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main>
-    <h1>Chemie Hausaufgaben Helfer</h1>
-    <p>Gib die Aufgabenstellung als Text ein (z. B. "Wie viele Mol sind in 18 g H2O?"). Die Seite versucht dann, einen detaillierten Lösungsweg und eine Antwort zu erzeugen.</p>
+    <header>
+        <h1>Chemie-Hausaufgaben-Helfer</h1>
+        <nav>
+            <ul>
+                <li><a href="#stoffmenge" aria-label="Calculator for Stoffmenge">Stoffmenge</a></li>
+                <li><a href="#element" aria-label="Element Overview">Elemente</a></li>
+                <li><a href="#chemische-regeln" aria-label="Chemical Rules">Stoffgesetze</a></li>
+                <li><a href="#kiai" aria-label="Solve with AI">KI-Lösung</a></li>
+            </ul>
+        </nav>
+    </header>
 
-    <label for="problem">Aufgabe (Text):</label>
-    <textarea id="problem" rows="6" placeholder="Hier die Aufgabenstellung eintippen..."></textarea>
+    <main class="card-grid">
+        <!-- Stoffmenge Block -->
+        <section id="stoffmenge" aria-labelledby="stoffmenge-title">
+            <h2 id="stoffmenge-title">Stoffmenge Rechner</h2>
+            <div class="calculator-section">
+                <label for="stoffmenge-mass">Masse (g):</label>
+                <input type="number" id="stoffmenge-mass" min="0" step="0.01" required>
+                <label for="stoffmenge-molar-mass">Molare Masse (g·mol⁻¹):</label>
+                <input type="number" id="stoffmenge-molar-mass" min="1" step="0.01" required>
+                <button id="stoffmenge-calculate" onclick="StoffmengeCalculator.calculate()">Berechnen</button>
+                <div id="stoffmenge-result"></div>
+                <button id="stoffmenge-invert" onclick="StoffmengeCalculator.invert()">Invertieren (n→m)</button>
+                <button onclick="solveWithAI()">KI-Lösung anfordern</button>
+            </div>
+        </section>
 
-    <div id="ai-controls">
-      <label><input type="checkbox" id="use-ai" checked> KI verwenden (OpenAI)</label>
-      <div class="ai-row">
-        <label for="model">Modell:</label>
-        <select id="model">
-          <option value="gpt-4">gpt-4</option>
-          <option value="gpt-4o" selected>gpt-4o</option>
-          <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
-        </select>
-      </div>
-      <div class="ai-row">
-        <label for="api-key">OpenAI API Key (optional):</label>
-        <input id="api-key" type="password" placeholder="sk-... (wird nicht gespeichert)">
-      </div>
-      <div class="ai-note">Hinweis: Im KI-Modus wird die komplette Aufgabe an OpenAI gesendet. Teile niemals vertrauliche Daten. Das API-Key-Feld dient nur für direkte Nutzung im Browser (unsicher). Für produktive Nutzung ist ein eigenes Backend besser.</div>
-    </div>
+        <!-- Element Overview -->
+        <section id="element" aria-labelledby="element-title">
+            <h2 id="element-title">Element Überblick</h2>
+            <div id="element-deck" class="element-deck">
+                <div class="element-card">
+                    <h3>Wasserstoff (H)</h3>
+                    <div class="data">
+                        <p><strong>Symbol:</strong> H</p>
+                        <p><strong>Atomzahl:</strong> 1</p>
+                        <p><strong>Atommasse:</strong> 1.008 g·mol⁻¹</p>
+                    </div>
+                </div>
+                <div class="element-card">
+                    <h3>Sauerstoff (O)</h3>
+                    <div class="data">
+                        <p><strong>Symbol:</strong> O</p>
+                        <p><strong>Atomzahl:</strong> 8</p>
+                        <p><strong>Atommasse:</strong> 16.00 g·mol⁻¹</p>
+                        <p><em>Häufigste Verbindungen:</em> H₂O, CO₂, O₂</p>
+                    </div>
+                </div>
+            </div>
+            <button onclick="loadMoreElements()">Weitere Elemente laden</button>
+            <div id="element-detail"></div>
+        </section>
 
-    <div class="controls">
-      <button id="solve">Lösen</button>
-      <button id="clear">Leeren</button>
-    </div>
+        <!-- Chemical Rules -->
+        <section id="chemische-regeln" aria-labelledby="chemische-regeln-title">
+            <h2 id="chemische-regeln-title">Chemische Regeln & Formeln</h2>
+            <div class="rules-library">
+                <div class="rule-card">
+                    <h3>Stöchiometrische Gleichung</h3>
+                    <p>aA + bB → cC + dD</p>
+                    <p><em>Coeffizienten geben molare Verhältnisse an</em></p>
+                </div>
+                <div class="rule-card">
+                    <h3>pH-Berechnung</h3>
+                    <p>pH = -log₁₀[H⁺]</p>
+                    <p>[OH⁻] = 10<sup>-pOH</sup> & pH + pOH = 14</p>
+                </div>
+                <div class="rule-card">
+                    <h3>Gasgesetze</h3>
+                    <p>pv = nRT</p>
+                    <p>R = 0.0821 L·bar/(mol·K)</p>
+                </div>
+            </div>
+        </section>
 
-    <section id="output">
-      <h2>Ausführlicher Lösungsweg</h2>
-      <pre id="steps">— noch keine Aufgabe eingegeben —</pre>
-      <h2>Antwort</h2>
-      <pre id="answer">— —</pre>
-    </section>
+        <!-- KI-Solve Section -->
+        <section id="kiai" aria-labelledby="kiai-title">
+            <h2 id="kiai-title">KI-Lösung anfordern</h2>
+            <p>Gib eine chemische Aufgabe ein und lass die KI sie lösen:</p>
+            <textarea id="ai-problem" rows="4" placeholder="z.B. Wie viele Mol sind in 18 g Wasser?"></textarea>
+            <button id="ai-solve-btn" onclick="solveWithAI()">Lösung anfordern</button>
+            <pre id="ai-answer"></pre>
+        </section>
+    </main>
 
-    <footer>
-      <p>Dies ist eine einfache, clientseitige Demo. Für komplexe Aufgaben können Grenzen der Heuristik auftreten.</p>
-    </footer>
-  </main>
-  <script src="app.js"></script>
+    <script src="ai-solver.js"></script>
+    <script src="calculator-stoffmenge.js"></script>
+    <script src="element-overview.js"></script>
+    <script src="rules-library.js"></script>
 </body>
 </html>
