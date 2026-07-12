@@ -41,7 +41,7 @@ jobs:
 
       # 3. Artefakt hochladen (docs/ Ordner)
       - name: Upload Pages artifact
-        uses: upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v3
         with:
           path: docs
 
