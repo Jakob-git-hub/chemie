@@ -183,17 +183,62 @@ function makePlaceholder(row, col, text) {
 function showElementFact(el) {
   const detail = document.getElementById('element-detail');
   if (!detail) return;
+
+  // Add glassmorphism-enhanced popup
   detail.innerHTML = `
-    <div class="pt-detail cat-${el.cat}">
+    <div class="pt-detail-glass cat-${el.cat}" data-element="${el.sym}">
+      <button class="close-btn" onclick="this.closest('.pt-detail-glass')?.remove();">&times;</button>
       <h3>${el.name} (${el.sym})</h3>
-      <p><strong>Ordnungszahl:</strong> ${el.n}</p>
-      <p><strong>Atommasse:</strong> ${el.mass} u</p>
-      <p><strong>Kategorie:</strong> ${CATEGORY_LABELS[el.cat] || el.cat}</p>
+      <p class="atomic-info">
+        <strong>Ordnungszahl:</strong> ${el.n}
+        <strong>· Atommasse:</strong> ${el.mass} u
+      </p>
+      <p class="category-tag cat-${el.cat}">${CATEGORY_LABELS[el.cat] || el.cat}</p>
       <p class="pt-fact">💡 ${el.fact}</p>
-      <button onclick="document.getElementById('element-detail').innerHTML=''">Schließen</button>
+      <p class="tip">💡 Wasserstoff: Häufigstes Element im Universum, hochentzündlich</p>
+      <button class="add-to-formula-btn" data-sym="${el.sym}">Zur Formel hinzufügen</button>
     </div>
   `;
   detail.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+
+  // Add event listener for "Add to Formula" button
+  const addBtn = detail.querySelector('.add-to-formula-btn');
+  if (addBtn) {
+    addBtn.addEventListener('click', appendElementToFormula);
+  }
+}
+
+/**
+ * Appends an element symbol to the chemical formula input field
+ * This connects the Periodic Table with the Stoffmenge Calculator
+ * @param {Event} e - Click event
+ */
+function appendElementToFormula(e) {
+  const sym = e.target.dataset.sym;
+  const formulaInput = document.getElementById('stoffmenge-formula');
+  if (!formulaInput) return;
+
+  const current = formulaInput.value.trim();
+
+  // If input is empty, start fresh
+  // If there's existing content, append the new element
+  const newValue = current ? `${current}${sym}` : sym;
+
+  formulaInput.value = newValue;
+  formulaInput.focus();
+
+  // Trigger the live parsing
+  if (window.StoffmengeCalculator && typeof window.StoffmengeCalculator.handleFormulaInput === 'function') {
+    window.StoffmengeCalculator.handleFormulaInput();
+  }
+
+  // Close the element detail after a brief delay
+  const detail = document.getElementById('element-detail');
+  if (detail) {
+    setTimeout(() => {
+      detail.innerHTML = '';
+    }, 1500);
+  }
 }
 
 // Erweiterte Karten-Übersicht: erste drei Perioden (H–Ar, Elemente 1–18)

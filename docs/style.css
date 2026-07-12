@@ -156,6 +156,26 @@ button.ai-btn { background: var(--accent-2); }
 .formula-feedback.success { color: var(--success); }
 .formula-feedback.error { color: var(--error); font-weight: 600; }
 
+/* Pulse animations for feedback */
+.pulse-success {
+  animation: pulseSuccess 0.5s ease-out;
+}
+.pulse-error {
+  animation: pulseError 0.5s ease-out;
+}
+
+@keyframes pulseSuccess {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulseError {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); background: rgba(224, 45, 60, 0.15); }
+  100% { transform: scale(1); }
+}
+
 .calc-line { margin: 6px 0; }
 .calc-line strong { color: var(--accent); font-size: 1.05rem; }
 .calc-sub { color: var(--muted); font-size: 0.85rem; margin: 2px 0 0; }

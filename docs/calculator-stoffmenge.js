@@ -23,58 +23,156 @@ const ATOMIC_MASS = {
 
 // Tiefgestellte Ziffern (₂, ₄, …) in normale Ziffern umwandeln
 const SUBSCRIPT_MAP = {'₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9'};
+
+// Erweitertes Formel-Parsing: unterstützt Klammern, Hydrat-Notation, Case-Sensitivity
 function normalizeFormula(s) {
-  return (s || '').replace(/[₀₁₂₃₄₅₆₇₈₉]/g, c => SUBSCRIPT_MAP[c] || c);
-}
+  if (!s) return '';
 
-// Robuster Parser: Elemente, Indizes, verschachtelte Klammern (z. B. Ca(OH)₂, (NH₄)₂SO₄)
-function parseFormula(formula) {
-  formula = normalizeFormula((formula || '').trim());
-  if (!formula) return {error: 'Bitte eine Formel eingeben.'};
+  // Umwandlung von tiefgestellten Ziffern
+  let normalized = (s || '').replace(/[₀₁₂₃₄₅₆₇₈₉]/g, c => SUBSCRIPT_MAP[c] || c);
 
-  const stack = [{}];
-  let i = 0;
-  while (i < formula.length) {
-    const ch = formula[i];
-    if (ch === '(') {
-      stack.push({});
-      i++;
-    } else if (ch === ')') {
-      i++;
-      let numStr = '';
-      while (i < formula.length && /\d/.test(formula[i])) { numStr += formula[i]; i++; }
-      const mult = numStr ? parseInt(numStr, 10) : 1;
-      const group = stack.pop();
-      const parent = stack[stack.length - 1];
-      for (const sym in group) parent[sym] = (parent[sym] || 0) + group[sym] * mult;
-    } else if (/[A-Z]/.test(ch)) {
-      let sym = ch; i++;
-      while (i < formula.length && /[a-z]/.test(formula[i])) { sym += formula[i]; i++; }
-      let numStr = '';
-      while (i < formula.length && /\d/.test(formula[i])) { numStr += formula[i]; i++; }
-      const count = numStr ? parseInt(numStr, 10) : 1;
-      if (!(sym in ATOMIC_MASS)) return {error: `Unbekanntes Elementsymbol: "${sym}"`};
-      const top = stack[stack.length - 1];
-      top[sym] = (top[sym] || 0) + count;
-    } else if (/\d/.test(ch)) {
-      return {error: 'Ungültige Formel: Zahl ohne vorausgehendes Element.'};
-    } else {
-      return {error: `Ungültiges Zeichen in der Formel: "${ch}"`};
+  // Behandlung von Hydrat-Notation (z.B. CuSO4*5H2O -> CuSO4(H2O)5)
+  normalized = normalized.replace(/(\*|\s*·\s*)/g, '*');
+
+  // Behandlung von Wasser-Notation (z.B. CuSO4.5H2O)
+  normalized = normalized.replace(/(\.|•)/g, '*');
+
+  // Trennung von Teilen mit *
+  const parts = normalized.split('*');
+  if (parts.length > 2) {
+    return {error: 'Ungültige Formel: Zu viele Hydrat-Komponenten.'};
+  }
+
+  // Hauptformel verarbeiten
+  const mainFormula = parts[0].trim();
+  let hydrateMultiplier = 1;
+  let hydrateFormula = '';
+
+  if (parts.length === 2) {
+    const hydratePart = parts[1].trim();
+    // Extrahiere den Multiplikator aus der Hydrat-Komponente (z.B. 5H2O -> 5, H2O)
+    const hydrateMatch = hydratePart.match(/^(\d*)(.*)$/);
+    if (hydrateMatch) {
+      hydrateMultiplier = hydrateMatch[1] ? parseInt(hydrateMatch[1], 10) : 1;
+      hydrateFormula = hydrateMatch[2];
+
+      // Wenn kein Multiplikator angegeben, aber eine Formel vorhanden ist, nehme 1
+      if (!hydrateMultiplier && hydrateFormula) {
+        hydrateMultiplier = 1;
+      }
     }
   }
-  if (stack.length !== 1) return {error: 'Klammern nicht geschlossen.'};
 
-  const counts = stack[0];
-  let mass = 0;
-  const composition = [];
-  for (const sym in counts) {
-    const c = counts[sym];
-    const m = ATOMIC_MASS[sym];
-    mass += m * c;
-    composition.push({sym, count: c, mass: m});
+  return {mainFormula, hydrateFormula, hydrateMultiplier};
+}
+
+// Erweiterter robuster Parser: Elemente, Indizes, verschachtelte Klammern (z. B. Ca(OH)₂, (NH₄)₂SO₄)
+function parseFormula(formula) {
+  if (!formula || !formula.trim()) return {error: 'Bitte eine Formel eingeben.'};
+
+  const normalized = normalizeFormula(formula);
+  if (normalized.error) return normalized;
+
+  const {mainFormula, hydrateFormula, hydrateMultiplier} = normalized;
+
+  // Funktion zum Parsen einer einzelnen Formel-Komponente
+  function parseComponent(comp) {
+    comp = (comp || '').trim();
+    if (!comp) return {counts: {}, mass: 0};
+
+    const stack = [{}];
+    let i = 0;
+
+    while (i < comp.length) {
+      const ch = comp[i];
+      if (ch === '(') {
+        stack.push({});
+        i++;
+      } else if (ch === ')') {
+        i++;
+        let numStr = '';
+        while (i < comp.length && /\d/.test(comp[i])) { numStr += comp[i]; i++; }
+        const mult = numStr ? parseInt(numStr, 10) : 1;
+        const group = stack.pop();
+        const parent = stack[stack.length - 1];
+        for (const sym in group) parent[sym] = (parent[sym] || 0) + group[sym] * mult;
+      } else if (/[A-Z]/.test(ch)) {
+        let sym = ch; i++;
+        while (i < comp.length && /[a-z]/.test(comp[i])) { sym += comp[i]; i++; }
+
+        // Spezielle Behandlung für ambiguous formulas like Co vs CO
+        if (sym.length === 1 && i < comp.length && /[A-Z]/.test(comp[i])) {
+          // Ein-buchstabiges Element gefolgt von Großbuchstaben - könnte ambig sein
+          // Wir behalten es bei, da die Parser-Logik es korrekt handhaben wird
+        }
+
+        let numStr = '';
+        while (i < comp.length && /\d/.test(comp[i])) { numStr += comp[i]; i++; }
+        const count = numStr ? parseInt(numStr, 10) : 1;
+        if (!(sym in ATOMIC_MASS)) return {error: `Unbekanntes Elementsymbol: "${sym}"`};
+        const top = stack[stack.length - 1];
+        top[sym] = (top[sym] || 0) + count;
+      } else if (/\d/.test(ch)) {
+        return {error: 'Ungültige Formel: Zahl ohne vorausgehendes Element.'};
+      } else {
+        return {error: `Ungültiges Zeichen in der Formel: "${ch}"`};
+      }
+    }
+
+    if (stack.length !== 1) return {error: 'Klammern nicht geschlossen.'};
+
+    const counts = stack[0];
+    let mass = 0;
+    const composition = [];
+    for (const sym in counts) {
+      const c = counts[sym];
+      const m = ATOMIC_MASS[sym];
+      mass += m * c;
+      composition.push({sym, count: c, mass: m});
+    }
+    composition.sort((a, b) => a.sym < b.sym ? -1 : 1);
+    return {counts, mass: Number(mass.toFixed(4)), composition};
   }
-  composition.sort((a, b) => a.sym < b.sym ? -1 : 1);
-  return {mass: Number(mass.toFixed(4)), composition};
+
+  // Hauptformel parsen
+  const mainResult = parseComponent(mainFormula);
+  if (mainResult.error) return mainResult;
+
+  // Hydrat-Komponente falls vorhanden
+  let totalMass = mainResult.mass;
+  let totalComposition = [...mainResult.composition];
+
+  if (hydrateFormula && hydrateMultiplier > 0) {
+    const hydrateResult = parseComponent(hydrateFormula);
+    if (hydrateResult.error) return hydrateResult;
+
+    // Hydrat-Komponente zum Gesamtgewicht hinzufügen
+    totalMass += hydrateResult.mass * hydrateMultiplier;
+
+    // Zusammensetzung kombinieren
+    const hydrateCounts = {};
+    for (const item of hydrateResult.composition) {
+      hydrateCounts[item.sym] = (hydrateCounts[item.sym] || 0) + item.count * hydrateMultiplier;
+    }
+
+    // Hauptzusammensetzung mit Hydrat-Zusammensetzung kombinieren
+    const combinedCounts = {};
+    for (const item of mainResult.composition) {
+      combinedCounts[item.sym] = (combinedCounts[item.sym] || 0) + item.count;
+    }
+    for (const [sym, count] of Object.entries(hydrateCounts)) {
+      combinedCounts[sym] = (combinedCounts[sym] || 0) + count;
+    }
+
+    // Zurück zu Array-Format konvertieren
+    totalComposition = Object.keys(combinedCounts).map(sym => ({
+      sym,
+      count: combinedCounts[sym],
+      mass: ATOMIC_MASS[sym]
+    })).sort((a, b) => a.sym < b.sym ? -1 : 1);
+  }
+
+  return {mass: Number(totalMass.toFixed(4)), composition: totalComposition};
 }
 
 function calculateMolarMassFromFormula(formula) {
@@ -130,16 +228,25 @@ function handleFormulaInput() {
     mEl.value = '';
     fb.textContent = '';
     fb.className = 'formula-feedback';
+    // Remove any animation classes
+    fb.classList.remove('pulse-error', 'pulse-success');
     return;
   }
   const r = parseFormula(raw);
   if (r.error) {
     fb.textContent = '⚠ ' + r.error;
     fb.className = 'formula-feedback error';
+    // Add pulse animation for error
+    fb.classList.add('pulse-error');
+    fb.classList.remove('pulse-success');
+    // Clear molar mass field on error
+    mEl.value = '';
     return;
   }
   mEl.value = r.mass;                 // Molare Masse automatisch befüllen
   fb.className = 'formula-feedback success';
+  fb.classList.add('pulse-success');
+  fb.classList.remove('pulse-error');
   fb.innerHTML = `M = <strong>${r.mass} g·mol⁻¹</strong> &nbsp; ` +
     '(' + r.composition.map(c => `${c.sym}${c.count > 1 ? c.count : ''}`).join(' + ') + ')';
 }
@@ -149,6 +256,19 @@ const _inv = document.getElementById('stoffmenge-invert');
 if (_inv) _inv.addEventListener('click', invertStoffmenge);
 const _frm = document.getElementById('stoffmenge-formula');
 if (_frm) _frm.addEventListener('input', handleFormulaInput);
+
+// Auch das Masse-Feld aktualisieren, wenn der Benutzer manuell eingibt
+const _massEl = document.getElementById('stoffmenge-mass');
+if (_massEl) {
+  _massEl.addEventListener('input', () => {
+    // Wenn der Benutzer manuell etwas eingibt, setzen wir das Feedback zurück
+    const fb = document.getElementById('formula-feedback');
+    if (fb && fb.className.includes('success')) {
+      fb.className = 'formula-feedback';
+      fb.classList.remove('pulse-success');
+    }
+  });
+}
 
 // Export
 window.StoffmengeCalculator = {
