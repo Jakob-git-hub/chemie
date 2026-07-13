@@ -1,47 +1,320 @@
-import { Suspense, lazy, useState } from 'react';
-import { MOLECULES } from '@/data/molecules';
+import { useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { parseFormula } from '@/lib/chem';
+import { useChemStore } from '@/store/useChemStore';
+import { ensureJSmol } from '@/lib/jsmol';
 
-// 3D-Modul wird erst bei Bedarf geladen (Bundle-schonend).
-const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
+// --- MathJax-Bootstrap (einmalig) für den Formelsatz ---
+function useMathJax() {
+  useEffect(() => {
+    if (document.getElementById('mathjax-script')) return;
+    const s = document.createElement('script');
+    s.id = 'mathjax-script';
+    s.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+    s.async = true;
+    document.head.appendChild(s);
+  }, []);
+}
+
+function Tex({ children }: { children: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const mj = (window as any).MathJax;
+    if (mj?.typesetPromise && ref.current) {
+      mj.typesetPromise([ref.current]).catch(() => {});
+    }
+  }, [children]);
+  return <span ref={ref}>{children}</span>;
+}
+
+// Atombilanz-Prüfung: zählt Atome pro Element auf beiden Seiten der ausgeglichenen Gleichung.
+function atomBalance(bal: ReturnType<typeof useChemStore.getState>['balance']) {
+  if (!bal?.ok || !bal.reactants || !bal.products || !bal.coeffs) return null;
+  const left: Record<string, number> = {};
+  const right: Record<string, number> = {};
+  const sides = [bal.reactants, bal.products];
+  sides.forEach((species, sideIdx) => {
+    species.forEach((f, i) => {
+      const parsed = parseFormula(f);
+      if (!parsed.ok) return;
+      const nu = bal.coeffs![i + (sideIdx === 0 ? 0 : bal.reactants!.length)];
+      Object.entries(parsed.counts).forEach(([el, c]) => {
+        const target = sideIdx === 0 ? left : right;
+        target[el] = (target[el] || 0) + c * nu;
+      });
+    });
+  });
+  const elements = [...new Set([...Object.keys(left), ...Object.keys(right)])];
+  const balanced = elements.every((el) => (left[el] || 0) === (right[el] || 0));
+  return { left, right, elements, balanced };
+}
+
+const EXAMPLES = ['Koffein', 'CCO', 'C6H12O6', 'Aspirin', 'Fe + O2 ->', 'CH4 + O2 ->'];
 
 export default function Molecules() {
-  const [selected, setSelected] = useState(MOLECULES[0]);
+  useMathJax();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const appletRef = useRef<any>(null);
+
+  const {
+    query,
+    isomer,
+    sdf,
+    jsmolReady,
+    searchStatus,
+    equation,
+    balance,
+    note,
+    deltaH,
+    deltaS,
+    temperature,
+    deltaG,
+    missingThermo,
+    overrides,
+    setQuery,
+    setEquation,
+    setTemperature,
+    setJsmolReady,
+    loadMolecule,
+    analyze,
+    setOverride
+  } = useChemStore();
+
+  // JSmol ein初始化 (einmalig, asynchron) – ersetzt den alten statischen Viewer.
+  useEffect(() => {
+    let cancelled = false;
+    ensureJSmol()
+      .then((Jmol) => {
+        if (cancelled || !containerRef.current) return;
+        const Info = {
+          width: '100%',
+          height: 440,
+          use: 'HTML5',
+          j2sPath: 'https://chemapps.stolaf.edu/jmol/jsmol/j2s',
+          disableJ2SLoadMonitor: true,
+          disableInitialConsole: true
+        };
+        const applet = Jmol.getApplet('jsmolApplet', Info);
+        containerRef.current.innerHTML = Jmol.getAppletHtml(applet);
+        appletRef.current = applet;
+        setJsmolReady(true);
+      })
+      .catch(() => setJsmolReady(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [setJsmolReady]);
+
+  // Reaktives Laden: sobald eine neue 3D-Struktur (SDF) vorliegt, in den Canvas spielen.
+  useEffect(() => {
+    if (!jsmolReady || !sdf || !appletRef.current) return;
+    const Jmol = (window as any).Jmol;
+    if (Jmol) Jmol.loadInline(appletRef.current, sdf);
+  }, [sdf, jsmolReady]);
+
+  const check = useMemo(() => atomBalance(balance), [balance]);
+  const spontaneous = deltaG !== null ? deltaG < 0 : null;
+
+  const onOverride = (formula: string, key: 'dHf' | 'S', value: string) => {
+    const num = Number(value);
+    if (Number.isNaN(num)) return;
+    setOverride(formula, key, num);
+    if (equation) analyze(equation); // sofort neu verrechnen (kein NaN, manuelle Korrektur)
+  };
 
   return (
-    <div className="grid gap-6 md:grid-cols-[280px_1fr]">
+    <div className="space-y-6">
+      {/* ---------- Universelle 3D-Suche (JSmol) ---------- */}
       <Card>
         <CardHeader>
-          <CardTitle>Molekül-Bibliothek</CardTitle>
+          <CardTitle>Universelle 3D-Struktur-Suche</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {MOLECULES.map((m) => (
-            <Button
-              key={m.id}
-              variant={m.id === selected.id ? 'default' : 'outline'}
-              className="justify-start"
-              onClick={() => setSelected(m)}
-            >
-              {m.name} <span className="ml-auto text-xs opacity-70">{m.formula}</span>
+        <CardContent className="space-y-3">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void loadMolecule(query);
+            }}
+            className="flex flex-col gap-2"
+          >
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Name, SMILES oder Summenformel (z. B. Koffein, CCO, C6H12O6)"
+            />
+            <Button type="submit" disabled={!jsmolReady}>
+              Struktur laden
             </Button>
-          ))}
+          </form>
+          <div className="flex flex-wrap gap-1.5">
+            {EXAMPLES.map((ex) => (
+              <Button
+                key={ex}
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!jsmolReady}
+                onClick={() => {
+                  setQuery(ex);
+                  if (/->/.test(ex)) analyze(ex);
+                  else void loadMolecule(ex);
+                }}
+              >
+                {ex}
+              </Button>
+            ))}
+          </div>
+          {searchStatus && (
+            <p className="text-sm text-muted-foreground">{searchStatus}</p>
+          )}
+          {isomer && (
+            <p className="text-sm">
+              <span className="font-medium">Hauptisomer:</span> {isomer.name}{' '}
+              <span className="text-muted-foreground">
+                (CID {isomer.cid}
+                {isomer.smiles ? ` · ${isomer.smiles}` : ''})
+              </span>
+            </p>
+          )}
+          <div
+            ref={containerRef}
+            className="w-full overflow-hidden rounded-xl border bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800"
+            style={{ minHeight: 440 }}
+          />
         </CardContent>
       </Card>
 
+      {/* ---------- Stöchiometrie- & Atombilanz-Prüfer ---------- */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            {selected.name} <span className="text-sm font-normal text-muted-foreground">({selected.formula})</span>
-          </CardTitle>
+          <CardTitle>Stöchiometrie- &amp; Atombilanz-Prüfer</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Suspense fallback={<div className="h-[420px] animate-pulse rounded-xl bg-muted" />}>
-            <MoleculeViewer molecule={selected} />
-          </Suspense>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Ziehen zum Drehen, Scrollen zum Zoomen. Atome sind nach dem CPK-Schema farbcodiert.
-          </p>
+        <CardContent className="space-y-3">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              analyze(equation);
+            }}
+            className="flex flex-col gap-2"
+          >
+            <Label>Reaktionsgleichung (Beispiel: "Fe + O2 -&gt;" oder "CH4 + O2 -&gt; CO2 + H2O")</Label>
+            <Input
+              value={equation}
+              onChange={(e) => setEquation(e.target.value)}
+              placeholder="Edukt + Edukt -> Produkt"
+            />
+            <Button type="submit">Gleichung ausgleichen &amp; prüfen</Button>
+          </form>
+
+          {balance && !balance.ok && (
+            <p className="text-sm text-destructive">{balance.error}</p>
+          )}
+          {note && <p className="text-sm text-muted-foreground">{note}</p>}
+
+          {balance?.ok && balance.balanced && (
+            <div className="space-y-3">
+              <p className="font-mono text-lg">{balance.balanced}</p>
+              {check && (
+                <div className="text-sm">
+                  <span className="font-medium">Atombilanz: </span>
+                  {check.balanced ? (
+                    <span className="text-green-600">ausgeglichen ✓</span>
+                  ) : (
+                    <span className="text-red-600">nicht ausgeglichen ✗</span>
+                  )}
+                  <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-xs">
+                    {check.elements.map((el) => (
+                      <div key={el} className="rounded border p-1">
+                        {el}: {check.left[el] || 0} = {check.right[el] || 0}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ---------- Live-gekoppelte Thermo-Engine (Gibbs-Helmholtz) ---------- */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Thermo-Engine &amp; Gibbs-Helmholtz-Simulator</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-lg border p-3">
+              <div className="text-xs text-muted-foreground">ΔH_R</div>
+              <div className="font-mono text-lg">{deltaH !== null ? `${deltaH.toFixed(1)}` : '–'}</div>
+              <div className="text-[10px] text-muted-foreground">kJ/mol</div>
+            </div>
+            <div className="rounded-lg border p-3">
+              <div className="text-xs text-muted-foreground">ΔS_R</div>
+              <div className="font-mono text-lg">{deltaS !== null ? `${deltaS.toFixed(1)}` : '–'}</div>
+              <div className="text-[10px] text-muted-foreground">J/(mol·K)</div>
+            </div>
+            <div className="rounded-lg border p-3">
+              <div className="text-xs text-muted-foreground">T</div>
+              <div className="font-mono text-lg">{temperature}</div>
+              <div className="text-[10px] text-muted-foreground">K</div>
+            </div>
+          </div>
+
+          <div>
+            <Label className="mb-1 block">Temperatur T: {temperature} K</Label>
+            <input
+              type="range"
+              min={200}
+              max={1000}
+              step={1}
+              value={temperature}
+              onChange={(e) => setTemperature(Number(e.target.value))}
+              className="h-2 w-full cursor-pointer appearance-none rounded bg-gray-200"
+            />
+          </div>
+
+          <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-4 text-center">
+            <Tex>{String.raw`\Delta G = \Delta H - T \cdot \Delta S`}</Tex>
+            <div className="font-mono text-3xl font-bold">
+              {deltaG !== null ? `${deltaG.toFixed(1)} kJ/mol` : 'warte auf ΔH_R …'}
+            </div>
+            {spontaneous !== null && (
+              <div className={`mt-1 text-sm font-medium ${spontaneous ? 'text-green-600' : 'text-red-600'}`}>
+                {spontaneous ? 'spontan (ΔG < 0)' : 'nicht spontan (ΔG > 0)'}
+              </div>
+            )}
+          </div>
+
+          {/* Manuelle Korrektur, falls API/DB keine Thermodaten liefert (kein NaN) */}
+          {missingThermo.length > 0 && (
+            <div className="rounded-lg border border-amber-400 bg-amber-50 p-3 text-sm dark:bg-amber-950/30">
+              <p className="mb-2 font-medium text-amber-700 dark:text-amber-300">
+                Fehlende Thermodaten – bitte manuell ergänzen:
+              </p>
+              {missingThermo.map((f) => (
+                <div key={f} className="mb-1 flex flex-wrap items-center gap-2">
+                  <span className="font-mono">{f}:</span>
+                  <Input
+                    type="number"
+                    placeholder="H_f° kJ/mol"
+                    className="h-8 w-36"
+                    value={overrides[f]?.dHf ?? ''}
+                    onChange={(e) => onOverride(f, 'dHf', e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="S° J/(mol·K)"
+                    className="h-8 w-36"
+                    value={overrides[f]?.S ?? ''}
+                    onChange={(e) => onOverride(f, 'S', e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

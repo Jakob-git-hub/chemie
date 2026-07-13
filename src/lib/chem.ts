@@ -292,3 +292,33 @@ export function calculateDeltaHFromBonds(
   const productEnergy = sumBonds(products);
   return productEnergy - reactantEnergy;
 }
+
+// ---- Stöchiometrie: Produkt-Vorschläge für unvollständige Gleichungen ----
+// Schlüssel = sortierte, durch "+" verbundene Edukt-Formeln.
+export const PRODUCT_SUGGESTIONS: Record<string, string[]> = {
+  'H2+O2': ['H2O'],
+  'C+O2': ['CO2'],
+  'CH4+O2': ['CO2', 'H2O'],
+  'C2H5OH+O2': ['CO2', 'H2O'],
+  'C6H12O6+O2': ['CO2', 'H2O'],
+  'C3H8+O2': ['CO2', 'H2O'],
+  'Na+Cl2': ['NaCl'],
+  'Mg+O2': ['MgO'],
+  'Fe+O2': ['Fe2O3'],
+  'S+O2': ['SO2'],
+  'N2+H2': ['NH3'],
+  'Al+O2': ['Al2O3'],
+  'Ca+O2': ['CaO']
+};
+
+/**
+ * Schlägt chemisch sinnvolle Produkte vor, wenn bei einer Reaktion keine
+ * Produkte angegeben wurden. Gibt [] zurück, wenn keine Regel passt.
+ */
+export function suggestProducts(reactants: string[]): string[] {
+  const r = reactants.map((s) => s.trim()).filter(Boolean);
+  if (r.length === 0) return [];
+  const keySorted = [...r].sort().join('+');
+  const keyRaw = r.join('+');
+  return PRODUCT_SUGGESTIONS[keySorted] ?? PRODUCT_SUGGESTIONS[keyRaw] ?? [];
+}
