@@ -1,6 +1,8 @@
 // Chemie-Kernlogik: Formel-Parser, molare Masse, Reaktions-Ausgleich.
 // Portiert und typsicher gemacht aus docs/calculator-stoffmenge.js.
 
+import type { Atom, Bond, Molecule } from '@/lib/types';
+
 export const ATOMIC_MASS: Record<string, number> = {
   H: 1.008, He: 4.0026, Li: 6.94, Be: 9.0122, B: 10.81, C: 12.011, N: 14.007, O: 15.999,
   F: 18.998, Ne: 20.18, Na: 22.99, Mg: 24.305, Al: 26.982, Si: 28.085, P: 30.974, S: 32.06,
@@ -242,4 +244,51 @@ function toIntCoeffs(vec: number[]): number[] {
   const firstNonZero = nums.find((v) => v !== 0);
   if (firstNonZero !== undefined && firstNonZero < 0) nums = nums.map((v) => -v);
   return nums;
+}
+
+// ---- Energiebilanz: Reaktionsenthalpie aus Bindungsenergien ----
+// Standard-Bindungsenergien (Mittelwerte) in kJ/mol.
+export const BOND_ENERGIES: Record<string, number> = {
+  'O-H': 459,
+  'C-H': 413,
+  'C-C': 348,
+  'C-O': 358,
+  'N-H': 391,
+  'C-N': 305,
+  'O-O': 145,
+  'H-H': 432,
+  'C=O': 799,
+  'C=C': 611,
+  'C≡C': 918
+};
+
+function bondKey(a: string, b: string): string {
+  const [x, y] = [a, b].sort();
+  return `${x}-${y}`;
+}
+
+/**
+ * Berechnet die Reaktionsenthalpie ΔH (kJ/mol) aus Bindungsenergien.
+ * ΔH = Σ Bindungsenergien(Produkte) − Σ Bindungsenergien(Reaktanten).
+ * @param reactants Liste von Molekül-Objekten (Edukte)
+ * @param products  Liste von Molekül-Objekten (Produkte)
+ */
+export function calculateDeltaHFromBonds(
+  reactants: Molecule[],
+  products: Molecule[]
+): number {
+  const sumBonds = (mols: Molecule[]): number =>
+    mols.reduce((sum: number, mol: Molecule) => {
+      const e = mol.bonds.reduce((acc: number, bnd: Bond) => {
+        const ea = mol.atoms.find((a: Atom) => a.id === bnd.from)?.element;
+        const eb = mol.atoms.find((a: Atom) => a.id === bnd.to)?.element;
+        if (!ea || !eb) return acc;
+        return acc + (BOND_ENERGIES[bondKey(ea, eb)] ?? 0);
+      }, 0);
+      return sum + e;
+    }, 0);
+
+  const reactantEnergy = sumBonds(reactants);
+  const productEnergy = sumBonds(products);
+  return productEnergy - reactantEnergy;
 }

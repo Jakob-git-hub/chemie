@@ -7,7 +7,9 @@ import { Moon, Sun, FlaskConical } from 'lucide-react';
 const NAV = [
   { to: '/', label: 'Start' },
   { to: '/molecules', label: 'Moleküle' },
-  { to: '/quiz', label: 'Quiz' }
+  { to: '/quiz', label: 'Quiz' },
+  { to: '/thermo', label: 'Thermodynamik' },
+  { to: '/jsmol', label: 'JSmol-Suche' }
 ];
 
 export default function Layout() {

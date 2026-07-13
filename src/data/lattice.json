@@ -1,0 +1,9 @@
+{
+  "latticeEnergies_kJmol": {
+    "NaCl": -786,
+    "MgO": -3795,
+    "CaCl2": -1300,
+    "KCl": -715,
+    "LiF": -1030
+  }
+}
