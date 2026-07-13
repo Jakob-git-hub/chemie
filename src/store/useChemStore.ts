@@ -1,67 +1,36 @@
 import { create } from 'zustand';
-import { balanceEquation, suggestProducts, calculateDeltaHFromBonds } from '@/lib/chem';
-import type { Molecule } from '@/lib/types';
-import { MOLECULES } from '@/data/molecules';
-import { fetchMainIsomer } from '@/lib/jsmol';
-import thermoData from '@/data/thermo.json';
-
-// Standardmolare Entropien S⁰ [J/(mol·K)] und Bildungsenthalpien H_f⁰ [kJ/mol].
-const S0 = (thermoData as { S0: Record<string, number> }).S0;
-const FORM = (thermoData as { formationEnthalpy: Record<string, number> }).formationEnthalpy;
-
-// Schlankes DE→EN-Mapping (PubChem erwartet englische Begriffe).
-const DE_EN: Record<string, string> = {
-  wasser: 'water',
-  wasserstoff: 'hydrogen',
-  sauerstoff: 'oxygen',
-  kohlenstoff: 'carbon',
-  stickstoff: 'nitrogen',
-  kohlendioxid: 'carbon dioxide',
-  kohlenstoffdioxid: 'carbon dioxide',
-  kohlenmonoxid: 'carbon monoxide',
-  methan: 'methane',
-  ethan: 'ethane',
-  ethen: 'ethene',
-  propan: 'propane',
-  ammoniak: 'ammonia',
-  ethanol: 'ethanol',
-  methanol: 'methanol',
-  benzol: 'benzene',
-  toluol: 'toluene',
-  phenol: 'phenol',
-  koffein: 'caffeine',
-  aspirin: 'aspirin',
-  acetylsalicylsäure: 'aspirin',
-  glukose: 'glucose',
-  traubenzucker: 'glucose',
-  zucker: 'sucrose',
-  essigsäure: 'acetic acid',
-  ameisensäure: 'formic acid',
-  zitronensäure: 'citric acid',
-  harnstoff: 'urea',
-  natriumchlorid: 'sodium chloride',
-  kochsalz: 'sodium chloride',
-  salzsäure: 'hydrogen chloride',
-  schwefelsäure: 'sulfuric acid',
-  natronlauge: 'sodium hydroxide',
-  eisen: 'iron',
-  magnesium: 'magnesium',
-  schwefel: 'sulfur',
-  salpeter: 'niter'
-};
-
-export interface BalanceResult {
-  ok: boolean;
-  balanced?: string;
-  reactants?: string[];
-  products?: string[];
-  coeffs?: number[];
-  error?: string;
-}
+import {
+  resolveCompound,
+  fetchThermo,
+  analyzeReaction,
+  computeGibbs,
+  LOCAL_THERMO,
+  type ThermoData
+} from '@/lib/api';
 
 interface Override {
   dHf?: number;
   S?: number;
+}
+
+interface SpeciesThermo {
+  formula: string;
+  coeff: number;
+  hFormation: number | null;
+  entropy: number | null;
+}
+
+interface Species {
+  formula: string;
+  role: 'reactant' | 'product';
+  coeff: number;
+}
+
+interface BalanceState {
+  ok: boolean;
+  balanced?: string;
+  species?: Species[];
+  error?: string;
 }
 
 interface ChemState {
@@ -74,10 +43,11 @@ interface ChemState {
 
   // --- Stöchiometrie ---
   equation: string;
-  balance: BalanceResult | null;
+  balance: BalanceState | null;
   note: string | null;
 
   // --- Thermo ---
+  thermoCache: Record<string, ThermoData>;
   deltaH: number | null; // kJ/mol
   deltaS: number | null; // J/(mol·K)
   temperature: number; // K
@@ -96,45 +66,66 @@ interface ChemState {
   computeDeltaG: () => void;
 }
 
-function computeThermo(
-  bal: BalanceResult,
-  overrides: Record<string, Override>
-): { deltaH: number | null; deltaS: number | null; missing: string[] } {
-  if (!bal.ok || !bal.reactants || !bal.products || !bal.coeffs) {
-    return { deltaH: null, deltaS: null, missing: [] };
+/** Löst Thermodaten einer Spezies auf: manuell -> Cache -> lokale Tabelle -> fehlend. */
+function resolveThermo(formula: string, s: ChemState): ThermoData {
+  const base: ThermoData =
+    s.thermoCache[formula] ??
+    (LOCAL_THERMO[formula]
+      ? {
+          hFormation: LOCAL_THERMO[formula].hFormation,
+          entropy: LOCAL_THERMO[formula].entropy,
+          source: 'local'
+        }
+      : { hFormation: null, entropy: null, source: 'missing' });
+
+  const ov = s.overrides[formula];
+  if (ov) {
+    return {
+      hFormation: ov.dHf ?? base.hFormation,
+      entropy: ov.S ?? base.entropy,
+      source: 'manual'
+    };
   }
-  const { reactants, products, coeffs } = bal;
-  const missing = new Set<string>();
-  let dH = 0;
-  let dS = 0;
-  let haveH = true;
-  let haveS = true;
+  return base;
+}
 
-  reactants.concat(products).forEach((f, i) => {
-    const sign = i < reactants.length ? -1 : 1; // Edukte -, Produkte +
-    const nu = coeffs[i];
-    const o = overrides[f];
-    const dHf = o?.dHf ?? FORM[f];
-    const s = o?.S ?? S0[f];
-    if (dHf === undefined) {
-      haveH = false;
-      missing.add(f);
-    } else {
-      dH += sign * nu * dHf;
-    }
-    if (s === undefined) {
-      haveS = false;
-      missing.add(f);
-    } else {
-      dS += sign * nu * s;
-    }
-  });
+/** Teilt die Reaktionsspezies in Edukte/Produkte auf und reichert sie mit Thermo an. */
+function splitSpecies(species: Species[], s: ChemState): { r: SpeciesThermo[]; p: SpeciesThermo[] } {
+  const r: SpeciesThermo[] = [];
+  const p: SpeciesThermo[] = [];
+  for (const sp of species) {
+    const t = resolveThermo(sp.formula, s);
+    const entry: SpeciesThermo = {
+      formula: sp.formula,
+      coeff: sp.coeff,
+      hFormation: t.hFormation,
+      entropy: t.entropy
+    };
+    if (sp.role === 'reactant') r.push(entry);
+    else p.push(entry);
+  }
+  return { r, p };
+}
 
-  return {
-    deltaH: haveH ? Number(dH.toFixed(2)) : null,
-    deltaS: haveS ? Number(dS.toFixed(2)) : null,
-    missing: [...missing]
-  };
+/** Best-Effort: fehlende Thermodaten live aus PubChem nachladen (kein Loop, kein Absturz). */
+async function refreshMissing(
+  missing: string[],
+  set: (partial: Partial<ChemState>) => void,
+  get: () => ChemState
+): Promise<void> {
+  for (const f of missing) {
+    if (get().overrides[f]) continue; // manuell gepflegt -> nicht überschreiben
+    try {
+      const info = await resolveCompound(f);
+      if (!info) continue;
+      const thermo = await fetchThermo(info.cid, info.formula);
+      if (thermo.hFormation == null && thermo.entropy == null) continue;
+      set({ thermoCache: { ...get().thermoCache, [f]: thermo } });
+      if (get().equation) get().analyze(get().equation); // Gibbs reaktiv neu verrechnen
+    } catch {
+      /* still fehlend -> manuelle Eingabe im UI */
+    }
+  }
 }
 
 export const useChemStore = create<ChemState>((set, get) => ({
@@ -148,6 +139,7 @@ export const useChemStore = create<ChemState>((set, get) => ({
   balance: null,
   note: null,
 
+  thermoCache: {},
   deltaH: null,
   deltaS: null,
   temperature: 298,
@@ -167,34 +159,31 @@ export const useChemStore = create<ChemState>((set, get) => ({
       overrides: { ...s.overrides, [formula]: { ...s.overrides[formula], [key]: value } }
     })),
 
+  // 3D-Struktur laden UND Thermo synchron mitabfragen (KPI #1)
   loadMolecule: async (qRaw) => {
-    const trimmed = qRaw.trim();
-    const q = DE_EN[trimmed.toLowerCase()] ?? trimmed; // Lokalisierung
+    const q = qRaw.trim();
     set({ searchStatus: 'Suche in PubChem …' });
-    try {
-      const res = await fetchMainIsomer(q);
-      if (!res) {
-        set({ searchStatus: `„${trimmed}“ nicht in PubChem gefunden.` });
-        return;
-      }
-      set({
-        sdf: res.sdf,
-        isomer: { name: res.name, formula: trimmed, cid: res.cid, smiles: res.smiles },
-        searchStatus: `Hauptisomer geladen: ${res.name} (CID ${res.cid})`
-      });
-    } catch {
-      set({ searchStatus: 'Netzwerkfehler bei PubChem.' });
+    const info = await resolveCompound(q);
+    if (!info) {
+      set({ searchStatus: `„${q}“ nicht in PubChem gefunden.`, sdf: null, isomer: null });
+      return;
     }
+    set({
+      sdf: info.sdf,
+      isomer: { name: info.name, formula: q, cid: info.cid, smiles: info.smiles },
+      searchStatus: `Hauptisomer geladen: ${info.name} (CID ${info.cid})`
+    });
+    const thermo = await fetchThermo(info.cid, info.formula);
+    set((s) => ({ thermoCache: { ...s.thermoCache, [info.formula]: thermo } }));
+    if (get().equation) get().analyze(get().equation); // Gibbs reaktiv neu verrechnen
   },
 
   analyze: (eqRaw) => {
-    const raw = eqRaw.trim();
-    const norm = raw.replace(/→|=/g, '->');
-    const parts = norm.split('->');
-    if (parts.length !== 2) {
+    const res = analyzeReaction(eqRaw);
+    if (!res.ok) {
       set({
-        balance: { ok: false, error: 'Bitte genau einen Pfeil (-> oder →) verwenden.' },
-        note: null,
+        balance: { ok: false, error: res.error },
+        note: res.note ?? null,
         deltaH: null,
         deltaS: null,
         deltaG: null,
@@ -202,67 +191,25 @@ export const useChemStore = create<ChemState>((set, get) => ({
       });
       return;
     }
-    let reactants = parts[0].split('+').map((s) => s.trim()).filter(Boolean);
-    let products = parts[1].split('+').map((s) => s.trim()).filter(Boolean);
+    if (!res.species) return;
+    set({ balance: { ok: true, balanced: res.balanced, species: res.species }, equation: eqRaw, note: null });
 
-    // Unvollständige Gleichung: sinnvolle Produkte vorschlagen.
-    if (products.length === 0) {
-      const sugg = suggestProducts(reactants);
-      if (sugg.length) products = sugg;
-    }
+    const { r, p } = splitSpecies(res.species, get());
+    const g = computeGibbs(r, p, get().temperature);
+    set({ deltaH: g.deltaH, deltaS: g.deltaS, deltaG: g.deltaG, missingThermo: g.missing });
 
-    const fullEq = `${reactants.join(' + ')} -> ${products.join(' + ')}`;
-    const bal = balanceEquation(fullEq); // mathematischer Ausgleich (Hill/species)
-
-    if (!bal.ok) {
-      set({
-        balance: { ok: false, error: bal.error ?? 'Gleichung nicht ausgleichbar.' },
-        note:
-          products.length === 0
-            ? 'Keine Produkte ermittelbar – bitte Produkte angeben oder eine bekannte Edukt-Kombination wählen.'
-            : null,
-        equation: fullEq,
-        deltaH: null,
-        deltaS: null,
-        deltaG: null,
-        missingThermo: []
-      });
-      return;
-    }
-
-    const res = computeThermo(bal, get().overrides);
-    set({
-      balance: bal,
-      equation: fullEq,
-      note: null,
-      deltaH: res.deltaH,
-      deltaS: res.deltaS,
-      missingThermo: res.missing,
-      deltaG: null
-    });
-    get().computeDeltaG();
+    if (g.missing.length) void refreshMissing(g.missing, set, get);
   },
 
   computeDeltaG: () => {
-    const { deltaH, deltaS, temperature } = get();
-    // Einheiten-Sync: ΔH [kJ/mol] -> J/mol (*1000), ΔS bereits [J/(mol·K)].
-    if (deltaH === null || deltaS === null) {
+    const { balance, temperature } = get();
+    if (!balance?.ok || !balance.species) {
       set({ deltaG: null });
       return;
     }
-    const dG_J = deltaH * 1000 - temperature * deltaS; // Joule/mol
-    set({ deltaG: Number((dG_J / 1000).toFixed(2)) }); // zurück zu kJ/mol
+    const { r, p } = splitSpecies(balance.species, get());
+    const g = computeGibbs(r, p, temperature);
+    set({ deltaH: g.deltaH, deltaS: g.deltaS, deltaG: g.deltaG, missingThermo: g.missing });
+    if (g.missing.length) void refreshMissing(g.missing, set, get);
   }
 }));
-
-// Hilfsfunktion für die UI: Bindungsenergie-Route (Modus A) bei Bedarf.
-export function deltaHFromBonds(reactantFormulas: string[], productFormulas: string[]) {
-  const rMols = reactantFormulas
-    .map((f) => MOLECULES.find((m) => m.formula === f) ?? null)
-    .filter((m): m is Molecule => m !== null);
-  const pMols = productFormulas
-    .map((f) => MOLECULES.find((m) => m.formula === f) ?? null)
-    .filter((m): m is Molecule => m !== null);
-  if (rMols.length === 0 || pMols.length === 0) return null;
-  return calculateDeltaHFromBonds(rMols, pMols);
-}

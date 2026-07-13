@@ -53,9 +53,9 @@ export async function fetchMainIsomer(query: string): Promise<IsomerResult | nul
   if (!q) return null;
   const primary = detectKind(q);
   // Eindeutige Reihenfolge mit primärer Erkennung zuerst.
-  const order: Kind[] = [primary, 'name', 'formula', 'smiles'].filter(
+  const order = [primary, 'name', 'formula', 'smiles'].filter(
     (k, i, a) => a.indexOf(k) === i
-  );
+  ) as Kind[];
 
   for (const kind of order) {
     try {

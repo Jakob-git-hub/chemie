@@ -3,9 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { parseFormula } from '@/lib/chem';
 import { useChemStore } from '@/store/useChemStore';
-import { ensureJSmol } from '@/lib/jsmol';
+import { ensureJSmol, checkAtomBalance } from '@/lib/api';
 
 // --- MathJax-Bootstrap (einmalig) für den Formelsatz ---
 function useMathJax() {
@@ -30,28 +29,6 @@ function Tex({ children }: { children: string }) {
   return <span ref={ref}>{children}</span>;
 }
 
-// Atombilanz-Prüfung: zählt Atome pro Element auf beiden Seiten der ausgeglichenen Gleichung.
-function atomBalance(bal: ReturnType<typeof useChemStore.getState>['balance']) {
-  if (!bal?.ok || !bal.reactants || !bal.products || !bal.coeffs) return null;
-  const left: Record<string, number> = {};
-  const right: Record<string, number> = {};
-  const sides = [bal.reactants, bal.products];
-  sides.forEach((species, sideIdx) => {
-    species.forEach((f, i) => {
-      const parsed = parseFormula(f);
-      if (!parsed.ok) return;
-      const nu = bal.coeffs![i + (sideIdx === 0 ? 0 : bal.reactants!.length)];
-      Object.entries(parsed.counts).forEach(([el, c]) => {
-        const target = sideIdx === 0 ? left : right;
-        target[el] = (target[el] || 0) + c * nu;
-      });
-    });
-  });
-  const elements = [...new Set([...Object.keys(left), ...Object.keys(right)])];
-  const balanced = elements.every((el) => (left[el] || 0) === (right[el] || 0));
-  return { left, right, elements, balanced };
-}
-
 const EXAMPLES = ['Koffein', 'CCO', 'C6H12O6', 'Aspirin', 'Fe + O2 ->', 'CH4 + O2 ->'];
 
 export default function Molecules() {
@@ -74,6 +51,7 @@ export default function Molecules() {
     deltaG,
     missingThermo,
     overrides,
+    thermoCache,
     setQuery,
     setEquation,
     setTemperature,
@@ -115,19 +93,19 @@ export default function Molecules() {
     if (Jmol) Jmol.loadInline(appletRef.current, sdf);
   }, [sdf, jsmolReady]);
 
-  const check = useMemo(() => atomBalance(balance), [balance]);
+  const check = useMemo(() => (balance?.species ? checkAtomBalance(balance.species) : null), [balance]);
   const spontaneous = deltaG !== null ? deltaG < 0 : null;
 
   const onOverride = (formula: string, key: 'dHf' | 'S', value: string) => {
     const num = Number(value);
-    if (Number.isNaN(num)) return;
+    if (Number.isNaN(num)) return; // kein NaN
     setOverride(formula, key, num);
-    if (equation) analyze(equation); // sofort neu verrechnen (kein NaN, manuelle Korrektur)
+    if (equation) analyze(equation); // sofort neu verrechnen (manuelle Korrektur)
   };
 
   return (
     <div className="space-y-6">
-      {/* ---------- Universelle 3D-Suche (JSmol) ---------- */}
+      {/* ---------- 1. Universelle 3D-Struktur-Suche (JSmol) ---------- */}
       <Card>
         <CardHeader>
           <CardTitle>Universelle 3D-Struktur-Suche</CardTitle>
@@ -167,9 +145,7 @@ export default function Molecules() {
               </Button>
             ))}
           </div>
-          {searchStatus && (
-            <p className="text-sm text-muted-foreground">{searchStatus}</p>
-          )}
+          {searchStatus && <p className="text-sm text-muted-foreground">{searchStatus}</p>}
           {isomer && (
             <p className="text-sm">
               <span className="font-medium">Hauptisomer:</span> {isomer.name}{' '}
@@ -187,7 +163,7 @@ export default function Molecules() {
         </CardContent>
       </Card>
 
-      {/* ---------- Stöchiometrie- & Atombilanz-Prüfer ---------- */}
+      {/* ---------- 2. Stöchiometrie- & Atombilanz-Prüfer ---------- */}
       <Card>
         <CardHeader>
           <CardTitle>Stöchiometrie- &amp; Atombilanz-Prüfer</CardTitle>
@@ -209,9 +185,7 @@ export default function Molecules() {
             <Button type="submit">Gleichung ausgleichen &amp; prüfen</Button>
           </form>
 
-          {balance && !balance.ok && (
-            <p className="text-sm text-destructive">{balance.error}</p>
-          )}
+          {balance && !balance.ok && <p className="text-sm text-destructive">{balance.error}</p>}
           {note && <p className="text-sm text-muted-foreground">{note}</p>}
 
           {balance?.ok && balance.balanced && (
@@ -226,9 +200,9 @@ export default function Molecules() {
                     <span className="text-red-600">nicht ausgeglichen ✗</span>
                   )}
                   <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-xs">
-                    {check.elements.map((el) => (
-                      <div key={el} className="rounded border p-1">
-                        {el}: {check.left[el] || 0} = {check.right[el] || 0}
+                    {check.rows.map((r) => (
+                      <div key={r.element} className="rounded border p-1">
+                        {r.element}: {r.left} = {r.right}
                       </div>
                     ))}
                   </div>
@@ -239,7 +213,7 @@ export default function Molecules() {
         </CardContent>
       </Card>
 
-      {/* ---------- Live-gekoppelte Thermo-Engine (Gibbs-Helmholtz) ---------- */}
+      {/* ---------- 3. Live-gekoppelte Thermo-Engine (Gibbs-Helmholtz) ---------- */}
       <Card>
         <CardHeader>
           <CardTitle>Thermo-Engine &amp; Gibbs-Helmholtz-Simulator</CardTitle>
@@ -294,25 +268,33 @@ export default function Molecules() {
               <p className="mb-2 font-medium text-amber-700 dark:text-amber-300">
                 Fehlende Thermodaten – bitte manuell ergänzen:
               </p>
-              {missingThermo.map((f) => (
-                <div key={f} className="mb-1 flex flex-wrap items-center gap-2">
-                  <span className="font-mono">{f}:</span>
-                  <Input
-                    type="number"
-                    placeholder="H_f° kJ/mol"
-                    className="h-8 w-36"
-                    value={overrides[f]?.dHf ?? ''}
-                    onChange={(e) => onOverride(f, 'dHf', e.target.value)}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="S° J/(mol·K)"
-                    className="h-8 w-36"
-                    value={overrides[f]?.S ?? ''}
-                    onChange={(e) => onOverride(f, 'S', e.target.value)}
-                  />
-                </div>
-              ))}
+              {missingThermo.map((f) => {
+                const t = thermoCache[f];
+                return (
+                  <div key={f} className="mb-1 flex flex-wrap items-center gap-2">
+                    <span className="font-mono">{f}:</span>
+                    {t?.source && (
+                      <span className="rounded bg-slate-200 px-1 text-[10px] dark:bg-slate-700">
+                        Quelle: {t.source}
+                      </span>
+                    )}
+                    <Input
+                      type="number"
+                      placeholder="H_f° kJ/mol"
+                      className="h-8 w-36"
+                      value={overrides[f]?.dHf ?? ''}
+                      onChange={(e) => onOverride(f, 'dHf', e.target.value)}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="S° J/(mol·K)"
+                      className="h-8 w-36"
+                      value={overrides[f]?.S ?? ''}
+                      onChange={(e) => onOverride(f, 'S', e.target.value)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

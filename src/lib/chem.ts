@@ -126,7 +126,7 @@ export function parseFormula(input: string): FormulaResult {
   return { ok: true, counts: combined, mass: Number(totalMass.toFixed(4)), composition };
 }
 
-// ---- Reaktions-Ausgleich über ganzzahlige Lineare Algebra ----
+// ---- Reaktions-Ausgleich über exakte rationale Lineare Algebra ----
 
 function gcd(a: number, b: number): number {
   a = Math.abs(a);
@@ -174,14 +174,15 @@ export function balanceEquation(equation: string): BalanceResult | ParseError {
   );
   const Mf = M.filter((row) => row.some((v) => v !== 0));
 
-  const ns = nullspace(Mf.length ? Mf : [[1]]);
-  if (!ns.vectors || ns.vectors.length === 0)
-    return { ok: false, error: 'Gleichung ist nicht ausgleichbar (Widerspruch in den Atomen).' };
-  if (ns.underdetermined)
+  const res = solveStoichiometry(Mf.length ? Mf : [[1]]);
+  if (res.coeffs === null && res.underdetermined)
     return { ok: false, error: 'Gleichung ist nicht eindeutig ausgleichbar (zu frei / Redox mit Ladung).' };
+  if (res.coeffs === null)
+    return { ok: false, error: 'Gleichung ist nicht ausgleichbar (Widerspruch in den Atomen).' };
 
-  const coeffs = toIntCoeffs(ns.vectors[0]);
-  if (coeffs.some((c) => c <= 0)) return { ok: false, error: 'Konnte keine positiven Koeffizienten finden.' };
+  const coeffs = res.coeffs;
+  if (coeffs.some((c) => c <= 0))
+    return { ok: false, error: 'Konnte keine positiven Koeffizienten finden (Edukte/Produkte prüfen).' };
 
   const fmt = (c: number, f: string) => (c === 1 ? f : `${c}${f}`);
   const left = reactants.map((f, i) => fmt(coeffs[i], f)).join(' + ');
@@ -189,61 +190,111 @@ export function balanceEquation(equation: string): BalanceResult | ParseError {
   return { ok: true, reactants, products, coeffs, balanced: `${left} → ${right}` };
 }
 
-// Rationale Gauß-Elimination -> Nullraum (vereinfacht, nur ganzzahlige Koeffizienten)
-function nullspace(A: number[][]): { vectors: number[][] | null; underdetermined: boolean } {
-  const rows = A.length;
-  const cols = A[0]?.length ?? 0;
-  // Boolesche Zeilenoperationen über Brüchen (als [zähler, nenner]) – hier pragmatisch über floating mit Toleranz
-  const m = A.map((r) => r.map((x) => x));
+// Exakte rationale Arithmetik, damit Koeffizienten verlustfrei als ganze
+// Zahlen entstehen (kein Float-Rounding, kein "scale=1000"-Trick).
+class Frac {
+  constructor(
+    public n: number,
+    public d: number = 1
+  ) {
+    if (this.d === 0) throw new Error('Nenner darf nicht 0 sein');
+    if (this.d < 0) {
+      this.n = -this.n;
+      this.d = -this.d;
+    }
+    const g = gcd(Math.abs(this.n), this.d) || 1;
+    this.n /= g;
+    this.d /= g;
+  }
+  add(o: Frac): Frac {
+    return new Frac(this.n * o.d + o.n * this.d, this.d * o.d);
+  }
+  sub(o: Frac): Frac {
+    return new Frac(this.n * o.d - o.n * this.d, this.d * o.d);
+  }
+  mul(o: Frac): Frac {
+    return new Frac(this.n * o.n, this.d * o.d);
+  }
+  neg(): Frac {
+    return new Frac(-this.n, this.d);
+  }
+  get isZero(): boolean {
+    return this.n === 0;
+  }
+}
+
+function lcm(a: number, b: number): number {
+  if (a === 0 || b === 0) return 0;
+  return Math.abs(a * b) / (gcd(Math.abs(a), Math.abs(b)) || 1);
+}
+
+interface NullResult {
+  coeffs: number[] | null;
+  underdetermined: boolean;
+}
+
+/**
+ * Löst das homogene Gleichungssystem A·x = 0 exakt über rationale Zahlen und
+ * liefert die (eindeutige) ganzzahlige Koeffizienten-Zeile zurück.
+ *  - 0 freie Spalten  → nur triviale Lösung (widersprüchlich) → coeffs = null
+ *  - >1 freie Spalten → unterbestimmt (Redox/Ladung)        → underdetermined
+ *  - 1 freie Spalte    → eindeutig; auf kleinstes gemeinsames Vielfache skaliert
+ */
+function solveStoichiometry(A0: number[][]): NullResult {
+  const rows = A0.length;
+  const cols = A0[0]?.length ?? 0;
+  if (cols === 0) return { coeffs: null, underdetermined: false };
+
+  const A: Frac[][] = A0.map((r) => r.map((x) => new Frac(x)));
   const pivots: number[] = [];
   let r = 0;
   for (let c = 0; c < cols && r < rows; c++) {
     let pr = -1;
     for (let i = r; i < rows; i++)
-      if (Math.abs(m[i][c]) > 1e-9) {
+      if (!A[i][c].isZero) {
         pr = i;
         break;
       }
     if (pr === -1) continue;
-    [m[r], m[pr]] = [m[pr], m[r]];
-    const piv = m[r][c];
-    for (let j = 0; j < cols; j++) m[r][j] /= piv;
+    [A[r], A[pr]] = [A[pr], A[r]];
+    const piv = A[r][c];
+    const inv = new Frac(piv.d, piv.n); // 1 / pivot
+    for (let j = 0; j < cols; j++) A[r][j] = A[r][j].mul(inv);
     for (let i = 0; i < rows; i++) {
-      if (i !== r && Math.abs(m[i][c]) > 1e-9) {
-        const f = m[i][c];
-        for (let j = 0; j < cols; j++) m[i][j] -= m[r][j] * f;
+      if (i !== r && !A[i][c].isZero) {
+        const f = A[i][c];
+        for (let j = 0; j < cols; j++) A[i][j] = A[i][j].sub(A[r][j].mul(f));
       }
     }
     pivots.push(c);
     r++;
   }
+
   const free: number[] = [];
   for (let c = 0; c < cols; c++) if (!pivots.includes(c)) free.push(c);
-  if (free.length === 0) return { vectors: [], underdetermined: false };
-  if (free.length > 1) return { vectors: null, underdetermined: true };
+  if (free.length === 0) return { coeffs: null, underdetermined: false }; // nur triviale Lsg.
+  if (free.length > 1) return { coeffs: null, underdetermined: true };
+
   const fv = free[0];
-  const vec = new Array(cols).fill(0);
-  vec[fv] = 1;
+  const vec: Frac[] = [];
+  for (let i = 0; i < cols; i++) vec.push(new Frac(0));
+  vec[fv] = new Frac(1);
   for (let i = 0; i < pivots.length; i++) {
     const pc = pivots[i];
-    let s = 0;
-    for (let j = 0; j < cols; j++) if (j !== pc) s += m[i][j] * vec[j];
-    vec[pc] = -s;
+    vec[pc] = A[i][fv].neg();
   }
-  return { vectors: [vec], underdetermined: false };
-}
 
-function toIntCoeffs(vec: number[]): number[] {
-  const den = vec.reduce((a, v) => (a * Math.abs(v.toString().split('.')[1]?.length ?? 0) || a), 1);
-  // Skaliere auf kleinstes gemeinsames Vielfaches der Nenner (vereinfacht)
-  void den;
-  const scale = 1000;
-  let nums = vec.map((v) => Math.round(v * scale));
+  // Auf kleinstes gemeinsames Vielfache der Nenner skalieren -> ganze Zahlen.
+  let denLcm = 1;
+  vec.forEach((v) => {
+    denLcm = lcm(denLcm, v.d);
+  });
+  let nums = vec.map((v) => v.n * (denLcm / v.d));
   const g = nums.reduce((a, v) => gcd(a, Math.abs(v)), 0) || 1;
-  nums = nums.map((v) => v / g);
-  const firstNonZero = nums.find((v) => v !== 0);
-  if (firstNonZero !== undefined && firstNonZero < 0) nums = nums.map((v) => -v);
-  return nums;
+  nums = nums.map((n) => n / g);
+  const firstNonZero = nums.find((n) => n !== 0);
+  if (firstNonZero !== undefined && firstNonZero < 0) nums = nums.map((n) => -n);
+  return { coeffs: nums, underdetermined: false };
 }
 
 // ---- Energiebilanz: Reaktionsenthalpie aus Bindungsenergien ----
@@ -288,9 +339,13 @@ export function calculateDeltaHFromBonds(
       return sum + e;
     }, 0);
 
-  const reactantEnergy = sumBonds(reactants);
-  const productEnergy = sumBonds(products);
-  return productEnergy - reactantEnergy;
+  // Vorzeichen-Konvention (Bindungsenthalpie):
+  //   BindungsBRUCH ist endotherm  (+), BindungsBILDUNG exotherm (-)
+  //   ΔH_rxn = Σ BDE(gebrochene Bindungen) − Σ BDE(gebildete Bindungen)
+  //   = Σ BDE(Edukte) − Σ BDE(Produkte)
+  const reactantEnergy = sumBonds(reactants); // Bindungsbruch  -> positiv (+)
+  const productEnergy = sumBonds(products); // Bindungsbildung -> negativ (−)
+  return reactantEnergy - productEnergy;
 }
 
 // ---- Stöchiometrie: Produkt-Vorschläge für unvollständige Gleichungen ----
