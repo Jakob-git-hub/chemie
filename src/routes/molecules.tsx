@@ -61,24 +61,37 @@ export default function Molecules() {
     setOverride
   } = useChemStore();
 
-  // JSmol ein初始化 (einmalig, asynchron) – ersetzt den alten statischen Viewer.
+  // JSmol-Init (einmalig, asynchron, hash-routing-sicher).
+  // WICHTIG: JSmol.getApplet sucht ein DOM-Element mit exakt dieser id und
+  // injiziert den Applet direkt hinein. Wir verwenden KEIN getAppletHtml +
+  // innerHTML – Browser führen per innerHTML eingefügte <script>-Tags nicht aus,
+  // wodurch der Canvas nie initialisiert würde (defekter Viewer).
   useEffect(() => {
     let cancelled = false;
+    let applet: any = null;
     ensureJSmol()
       .then((Jmol) => {
         if (cancelled || !containerRef.current) return;
+        // Ziel-Element sicherstellen (id == Applet-Name, damit getApplet treffen kann).
+        if (!containerRef.current.id) containerRef.current.id = 'jsmolApplet';
         const Info = {
           width: '100%',
           height: 440,
           use: 'HTML5',
           j2sPath: 'https://chemapps.stolaf.edu/jmol/jsmol/j2s',
           disableJ2SLoadMonitor: true,
-          disableInitialConsole: true
+          disableInitialConsole: true,
+          // Erst wenn der j2s-Core geladen & der Applet wirklich bereit ist,
+          // das Ready-Flag setzen (kein verfrühtes Enable des Lade-Buttons).
+          readyFunction: (a: any) => {
+            if (cancelled) return;
+            applet = a;
+            appletRef.current = a;
+            setJsmolReady(true);
+          }
         };
-        const applet = Jmol.getApplet('jsmolApplet', Info);
-        containerRef.current.innerHTML = Jmol.getAppletHtml(applet);
+        applet = Jmol.getApplet('jsmolApplet', Info);
         appletRef.current = applet;
-        setJsmolReady(true);
       })
       .catch(() => setJsmolReady(false));
     return () => {
@@ -157,6 +170,7 @@ export default function Molecules() {
           )}
           <div
             ref={containerRef}
+            id="jsmolApplet"
             className="w-full overflow-hidden rounded-xl border bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800"
             style={{ minHeight: 440 }}
           />
