@@ -66,6 +66,10 @@ export default function Molecules() {
   // injiziert den Applet direkt hinein. Wir verwenden KEIN getAppletHtml +
   // innerHTML – Browser führen per innerHTML eingefügte <script>-Tags nicht aus,
   // wodurch der Canvas nie initialisiert würde (defekter Viewer).
+  // Das Ready-Flag wird SOFORT nach getApplet gesetzt: JSmol queued alle
+  // Befehle (loadInline/script) bis der asynchrone j2s-Core geladen ist – ein
+  // Warten auf readyFunction ist weder nötig noch zuverlässig (Button bliebe sonst
+  // dauerhaft disabled).
   useEffect(() => {
     let cancelled = false;
     let applet: any = null;
@@ -81,17 +85,20 @@ export default function Molecules() {
           j2sPath: 'https://chemapps.stolaf.edu/jmol/jsmol/j2s',
           disableJ2SLoadMonitor: true,
           disableInitialConsole: true,
-          // Erst wenn der j2s-Core geladen & der Applet wirklich bereit ist,
-          // das Ready-Flag setzen (kein verfrühtes Enable des Lade-Buttons).
+          // Zusätzlicher Hook, sobald der Core wirklich bereit ist – kein Gate
+          // für den Button, nur Refresh des Refs.
           readyFunction: (a: any) => {
             if (cancelled) return;
-            applet = a;
             appletRef.current = a;
-            setJsmolReady(true);
           }
         };
         applet = Jmol.getApplet('jsmolApplet', Info);
         appletRef.current = applet;
+        // Button SOFORT aktivieren – das Applet-Objekt existiert. JSmol queued
+        // sämtliche loadInline/script-Befehle selbst, bis der j2s-Core geladen ist.
+        // Auf readyFunction zu warten würde den Button bei Core-Lade-Störungen
+        // (CDN-Timeout, offline) dauerhaft sperren.
+        setJsmolReady(true);
       })
       .catch(() => setJsmolReady(false));
     return () => {
