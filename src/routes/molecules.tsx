@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +35,7 @@ export default function Molecules() {
   useMathJax();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const appletRef = useRef<any>(null);
+  const [jsmolError, setJsmolError] = useState(false);
 
   const {
     query,
@@ -66,18 +67,17 @@ export default function Molecules() {
   // injiziert den Applet direkt hinein. Wir verwenden KEIN getAppletHtml +
   // innerHTML – Browser führen per innerHTML eingefügte <script>-Tags nicht aus,
   // wodurch der Canvas nie initialisiert würde (defekter Viewer).
-  // Das Ready-Flag wird SOFORT nach getApplet gesetzt: JSmol queued alle
-  // Befehle (loadInline/script) bis der asynchrone j2s-Core geladen ist – ein
-  // Warten auf readyFunction ist weder nötig noch zuverlässig (Button bliebe sonst
-  // dauerhaft disabled).
+  // Die Suche (PubChem) ist VÖLLIG unabhängig von JSmol – der Button darf daher
+  // NIEMALS wegen eines JSmol-Ladefehlers deaktiviert werden. Ein JSmol-Problem
+  // führt nur dazu, dass der 3D-Canvas fehlt; die Molekülinfo wird trotzdem
+  // angezeigt.
   useEffect(() => {
     let cancelled = false;
-    let applet: any = null;
     ensureJSmol()
       .then((Jmol) => {
         if (cancelled || !containerRef.current) return;
         // Ziel-Element sicherstellen (id == Applet-Name, damit getApplet treffen kann).
-        if (!containerRef.current.id) containerRef.current.id = 'jsmolApplet';
+        containerRef.current.id = 'jsmolApplet';
         const Info = {
           width: '100%',
           height: 440,
@@ -85,22 +85,28 @@ export default function Molecules() {
           j2sPath: 'https://chemapps.stolaf.edu/jmol/jsmol/j2s',
           disableJ2SLoadMonitor: true,
           disableInitialConsole: true,
-          // Zusätzlicher Hook, sobald der Core wirklich bereit ist – kein Gate
-          // für den Button, nur Refresh des Refs.
+          // Hook, sobald der Core wirklich bereit ist – nur Refresh des Refs.
           readyFunction: (a: any) => {
             if (cancelled) return;
             appletRef.current = a;
           }
         };
-        applet = Jmol.getApplet('jsmolApplet', Info);
-        appletRef.current = applet;
-        // Button SOFORT aktivieren – das Applet-Objekt existiert. JSmol queued
-        // sämtliche loadInline/script-Befehle selbst, bis der j2s-Core geladen ist.
-        // Auf readyFunction zu warten würde den Button bei Core-Lade-Störungen
-        // (CDN-Timeout, offline) dauerhaft sperren.
+        // Suche (Button) sofort freigeben – unabhängig vom 3D-Viewer.
         setJsmolReady(true);
+        try {
+          // Applet synchron erstellen; der j2s-Core lädt asynchron, loadInline
+          // wird von JSmol selbst queued.
+          appletRef.current = Jmol.getApplet('jsmolApplet', Info);
+        } catch (e) {
+          console.error('JSmol-Applet konnte nicht erstellt werden', e);
+          setJsmolError(true);
+        }
       })
-      .catch(() => setJsmolReady(false));
+      .catch((e) => {
+        console.error('JSmol konnte nicht geladen werden', e);
+        // Button NICHT sperren: Suche funktioniert trotzdem, nur der 3D-Viewer fehlt.
+        setJsmolError(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -143,7 +149,7 @@ export default function Molecules() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Name, SMILES oder Summenformel (z. B. Koffein, CCO, C6H12O6)"
             />
-            <Button type="submit" disabled={!jsmolReady}>
+            <Button type="submit">
               Struktur laden
             </Button>
           </form>
@@ -154,7 +160,6 @@ export default function Molecules() {
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={!jsmolReady}
                 onClick={() => {
                   setQuery(ex);
                   if (/->/.test(ex)) analyze(ex);
@@ -166,6 +171,11 @@ export default function Molecules() {
             ))}
           </div>
           {searchStatus && <p className="text-sm text-muted-foreground">{searchStatus}</p>}
+          {jsmolError && (
+            <p className="text-sm text-destructive">
+              3D-Viewer nicht verfügbar (JSmol/CDN). Molekülinfo wird trotzdem angezeigt.
+            </p>
+          )}
           {isomer && (
             <p className="text-sm">
               <span className="font-medium">Hauptisomer:</span> {isomer.name}{' '}
