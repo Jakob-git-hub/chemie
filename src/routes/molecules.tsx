@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useChemStore } from '@/store/useChemStore';
-import { ensureJSmol, checkAtomBalance } from '@/lib/api';
+import { checkAtomBalance } from '@/lib/api';
+import { parseSDF } from '@/lib/sdf';
+
+// 3D-Modul (React-Three-Fiber) wird erst bei Bedarf geladen.
+const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
 
 // --- MathJax-Bootstrap (einmalig) für den Formelsatz ---
 function useMathJax() {
@@ -33,16 +37,12 @@ const EXAMPLES = ['Koffein', 'CCO', 'C6H12O6', 'Aspirin', 'Fe + O2 ->', 'CH4 + O
 
 export default function Molecules() {
   useMathJax();
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const appletRef = useRef<any>(null);
-  const [jsmolError, setJsmolError] = useState(false);
-  const [appletReady, setAppletReady] = useState(false);
+  const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
 
   const {
     query,
     isomer,
     sdf,
-    jsmolReady,
     searchStatus,
     equation,
     balance,
@@ -57,78 +57,29 @@ export default function Molecules() {
     setQuery,
     setEquation,
     setTemperature,
-    setJsmolReady,
     loadMolecule,
     analyze,
     setOverride
   } = useChemStore();
 
-  // JSmol-Init (einmalig, asynchron, hash-routing-sicher).
-  // SPA-sicher: JSmol nutzt intern document.write, was in einer schon geladenen
-  // Single-Page-App wirft (→ getApplet schlägt fehl). Daher setDocument(false)
-  // (globaler Schalter aus) und das Applet danach manuell via setAppletHtml
-  // platzieren – kein document.write mehr.
-  // Die Suche (PubChem) ist VÖLLIG unabhängig von JSmol – der Button darf daher
-  // NIEMALS wegen eines JSmol-Ladefehlers deaktiviert werden. Ein JSmol-Problem
-  // führt nur dazu, dass der 3D-Canvas fehlt; die Molekülinfo wird trotzdem
-  // angezeigt.
-  useEffect(() => {
-    let cancelled = false;
-    ensureJSmol()
-      .then((Jmol) => {
-        if (cancelled || !containerRef.current) return;
-        // document.write deaktivieren – Applet wird gleich manuell platziert.
-        Jmol.setDocument(false);
-        containerRef.current.id = 'jsmolApplet';
-        const Info = {
-          width: '100%',
-          height: 440,
-          use: 'HTML5',
-          j2sPath: 'https://chemapps.stolaf.edu/jmol/jsmol/j2s',
-          disableJ2SLoadMonitor: true,
-          disableInitialConsole: true,
-          // Hook, sobald der Core wirklich bereit ist.
-          readyFunction: (a: any) => {
-            if (cancelled) return;
-            appletRef.current = a;
-            setAppletReady(true);
-          }
-        };
-        // Suche (Button) sofort freigeben – unabhängig vom 3D-Viewer.
-        setJsmolReady(true);
-        try {
-          // setDocument(false) -> getApplet liefert den HTML-String (kein
-          // document.write). HTML5-Modus nutzt <div>/<object>, keine <script>-Tags,
-          // daher ist innerHTML-Platzierung sicher. Fallback: Objekt-Rückgabe.
-          const result = Jmol.getApplet('jsmolApplet', Info);
-          if (typeof result === 'string') {
-            containerRef.current.innerHTML = result;
-          } else {
-            // Applet-Objekt zurückgegeben -> über setAppletHtml platzieren.
-            Jmol.setAppletHtml(result, containerRef.current);
-          }
-        } catch (e) {
-          console.error('JSmol-Applet konnte nicht erstellt werden', e);
-          setJsmolError(true);
-        }
-      })
-      .catch((e) => {
-        console.error('JSmol konnte nicht geladen werden', e);
-        // Button NICHT sperren: Suche funktioniert trotzdem, nur der 3D-Viewer fehlt.
-        setJsmolError(true);
-      });
-    return () => {
-      cancelled = true;
+  // PubChem-SDF (3D) -> Molecule für den React-Three-Fiber-Viewer.
+  // Völlig ohne externes JSmol/CDN – daher im Browser zuverlässig.
+  const molecule = useMemo(() => {
+    if (!sdf) return null;
+    const parsed = parseSDF(sdf);
+    if (!parsed) return null;
+    return {
+      id: 'search',
+      name: isomer?.name ?? 'Struktur',
+      formula: isomer?.formula ?? '',
+      atoms: parsed.atoms,
+      bonds: parsed.bonds
     };
-  }, [setJsmolReady]);
+  }, [sdf, isomer]);
 
-  // Reaktives Laden: sobald eine neue 3D-Struktur (SDF) vorliegt ODER das
-  // Applet bereit wird, in den Canvas spielen.
-  useEffect(() => {
-    if (!jsmolReady || !sdf || !appletRef.current) return;
-    const Jmol = (window as any).Jmol;
-    if (Jmol) Jmol.loadInline(appletRef.current, sdf);
-  }, [sdf, jsmolReady, appletReady]);
+  const selectedAtom = selectedAtomId
+    ? molecule?.atoms.find((a) => a.id === selectedAtomId) ?? null
+    : null;
 
   const check = useMemo(() => (balance?.species ? checkAtomBalance(balance.species) : null), [balance]);
   const spontaneous = deltaG !== null ? deltaG < 0 : null;
@@ -142,7 +93,7 @@ export default function Molecules() {
 
   return (
     <div className="space-y-6">
-      {/* ---------- 1. Universelle 3D-Struktur-Suche (JSmol) ---------- */}
+      {/* ---------- 1. Universelle 3D-Struktur-Suche ---------- */}
       <Card>
         <CardHeader>
           <CardTitle>Universelle 3D-Struktur-Suche</CardTitle>
@@ -182,11 +133,6 @@ export default function Molecules() {
             ))}
           </div>
           {searchStatus && <p className="text-sm text-muted-foreground">{searchStatus}</p>}
-          {jsmolError && (
-            <p className="text-sm text-destructive">
-              3D-Viewer nicht verfügbar (JSmol/CDN). Molekülinfo wird trotzdem angezeigt.
-            </p>
-          )}
           {isomer && (
             <p className="text-sm">
               <span className="font-medium">Hauptisomer:</span> {isomer.name}{' '}
@@ -196,12 +142,39 @@ export default function Molecules() {
               </span>
             </p>
           )}
-          <div
-            ref={containerRef}
-            id="jsmolApplet"
-            className="w-full overflow-hidden rounded-xl border bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800"
-            style={{ minHeight: 440 }}
-          />
+
+          {/* 3D-Viewer (React-Three-Fiber) – keine externe CDN-Abhängigkeit */}
+          {molecule ? (
+            <>
+              <Suspense fallback={<div className="h-[440px] animate-pulse rounded-xl bg-muted" />}>
+                <MoleculeViewer molecule={molecule} height={440} onSelectAtom={setSelectedAtomId} />
+              </Suspense>
+              {selectedAtom ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+                  <div>
+                    <span className="font-medium">Ausgewähltes Atom: </span>
+                    <span className="font-mono">
+                      {selectedAtom.element} ({selectedAtom.id})
+                    </span>
+                    <span className="ml-2 font-mono text-muted-foreground">
+                      [{selectedAtom.position.map((n) => n.toFixed(2)).join(', ')}]
+                    </span>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedAtomId(null)}>
+                    Zurücksetzen
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Tippe auf ein Atom im 3D-Modell, um es auszuwählen.
+                </p>
+              )}
+            </>
+          ) : (
+            <div className="flex h-[440px] items-center justify-center rounded-xl border text-muted-foreground">
+              Noch keine Struktur geladen – suche oben nach einem Molekül.
+            </div>
+          )}
         </CardContent>
       </Card>
 
