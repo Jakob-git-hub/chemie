@@ -36,6 +36,7 @@ export default function Molecules() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const appletRef = useRef<any>(null);
   const [jsmolError, setJsmolError] = useState(false);
+  const [appletReady, setAppletReady] = useState(false);
 
   const {
     query,
@@ -63,10 +64,10 @@ export default function Molecules() {
   } = useChemStore();
 
   // JSmol-Init (einmalig, asynchron, hash-routing-sicher).
-  // WICHTIG: JSmol.getApplet sucht ein DOM-Element mit exakt dieser id und
-  // injiziert den Applet direkt hinein. Wir verwenden KEIN getAppletHtml +
-  // innerHTML – Browser führen per innerHTML eingefügte <script>-Tags nicht aus,
-  // wodurch der Canvas nie initialisiert würde (defekter Viewer).
+  // SPA-sicher: JSmol nutzt intern document.write, was in einer schon geladenen
+  // Single-Page-App wirft (→ getApplet schlägt fehl). Daher setDocument(false)
+  // (globaler Schalter aus) und das Applet danach manuell via setAppletHtml
+  // platzieren – kein document.write mehr.
   // Die Suche (PubChem) ist VÖLLIG unabhängig von JSmol – der Button darf daher
   // NIEMALS wegen eines JSmol-Ladefehlers deaktiviert werden. Ein JSmol-Problem
   // führt nur dazu, dass der 3D-Canvas fehlt; die Molekülinfo wird trotzdem
@@ -76,7 +77,8 @@ export default function Molecules() {
     ensureJSmol()
       .then((Jmol) => {
         if (cancelled || !containerRef.current) return;
-        // Ziel-Element sicherstellen (id == Applet-Name, damit getApplet treffen kann).
+        // document.write deaktivieren – Applet wird gleich manuell platziert.
+        Jmol.setDocument(false);
         containerRef.current.id = 'jsmolApplet';
         const Info = {
           width: '100%',
@@ -85,18 +87,26 @@ export default function Molecules() {
           j2sPath: 'https://chemapps.stolaf.edu/jmol/jsmol/j2s',
           disableJ2SLoadMonitor: true,
           disableInitialConsole: true,
-          // Hook, sobald der Core wirklich bereit ist – nur Refresh des Refs.
+          // Hook, sobald der Core wirklich bereit ist.
           readyFunction: (a: any) => {
             if (cancelled) return;
             appletRef.current = a;
+            setAppletReady(true);
           }
         };
         // Suche (Button) sofort freigeben – unabhängig vom 3D-Viewer.
         setJsmolReady(true);
         try {
-          // Applet synchron erstellen; der j2s-Core lädt asynchron, loadInline
-          // wird von JSmol selbst queued.
-          appletRef.current = Jmol.getApplet('jsmolApplet', Info);
+          // setDocument(false) -> getApplet liefert den HTML-String (kein
+          // document.write). HTML5-Modus nutzt <div>/<object>, keine <script>-Tags,
+          // daher ist innerHTML-Platzierung sicher. Fallback: Objekt-Rückgabe.
+          const result = Jmol.getApplet('jsmolApplet', Info);
+          if (typeof result === 'string') {
+            containerRef.current.innerHTML = result;
+          } else {
+            // Applet-Objekt zurückgegeben -> über setAppletHtml platzieren.
+            Jmol.setAppletHtml(result, containerRef.current);
+          }
         } catch (e) {
           console.error('JSmol-Applet konnte nicht erstellt werden', e);
           setJsmolError(true);
@@ -112,12 +122,13 @@ export default function Molecules() {
     };
   }, [setJsmolReady]);
 
-  // Reaktives Laden: sobald eine neue 3D-Struktur (SDF) vorliegt, in den Canvas spielen.
+  // Reaktives Laden: sobald eine neue 3D-Struktur (SDF) vorliegt ODER das
+  // Applet bereit wird, in den Canvas spielen.
   useEffect(() => {
     if (!jsmolReady || !sdf || !appletRef.current) return;
     const Jmol = (window as any).Jmol;
     if (Jmol) Jmol.loadInline(appletRef.current, sdf);
-  }, [sdf, jsmolReady]);
+  }, [sdf, jsmolReady, appletReady]);
 
   const check = useMemo(() => (balance?.species ? checkAtomBalance(balance.species) : null), [balance]);
   const spontaneous = deltaG !== null ? deltaG < 0 : null;
