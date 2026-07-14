@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -35,6 +35,8 @@ const RADII: Record<string, number> = {
   Fe: 0.55
 };
 
+const HIGHLIGHT_COLOR = '#ffcc00';
+
 function bondTransform(a: [number, number, number], b: [number, number, number]) {
   const start = new THREE.Vector3(...a);
   const end = new THREE.Vector3(...b);
@@ -61,6 +63,15 @@ export default function MoleculeViewer({ molecule, height = 420, onSelectAtom }:
     return map;
   }, [molecule]);
 
+  const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
+
+  const handleAtomClick = (atomId: string) => {
+    setSelectedAtomId(atomId);
+    onSelectAtom?.(atomId);
+  };
+
+  const selectedAtom = selectedAtomId ? molecule.atoms.find((a) => a.id === selectedAtomId) : null;
+
   return (
     <div
       style={{ height }}
@@ -71,23 +82,36 @@ export default function MoleculeViewer({ molecule, height = 420, onSelectAtom }:
         <directionalLight position={[5, 5, 5]} intensity={0.8} />
         <directionalLight position={[-5, -3, -5]} intensity={0.3} />
 
-        {molecule.atoms.map((atom) => (
-          <mesh
-            key={atom.id}
-            position={atom.position}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectAtom?.(atom.id);
-            }}
-          >
-            <sphereGeometry args={[RADII[atom.element] ?? 0.45, 32, 32]} />
-            <meshStandardMaterial
-              color={ELEMENT_COLORS[atom.element] ?? '#cc44cc'}
-              roughness={0.35}
-              metalness={0.1}
-            />
+        {molecule.atoms.map((atom) => {
+          const isSelected = atom.id === selectedAtomId;
+          return (
+            <mesh
+              key={atom.id}
+              position={atom.position}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAtomClick(atom.id);
+              }}
+            >
+              <sphereGeometry args={[RADII[atom.element] ?? 0.45, 32, 32]} />
+              <meshStandardMaterial
+                color={isSelected ? HIGHLIGHT_COLOR : ELEMENT_COLORS[atom.element] ?? '#cc44cc'}
+                emissive={isSelected ? HIGHLIGHT_COLOR : '#000000'}
+                emissiveIntensity={isSelected ? 0.6 : 0}
+                roughness={0.35}
+                metalness={0.1}
+              />
+            </mesh>
+          );
+        })}
+
+        {/* Sichtbarer Auswahl-Ring um das gewählte Atom */}
+        {selectedAtom && (
+          <mesh position={selectedAtom.position}>
+            <sphereGeometry args={[(RADII[selectedAtom.element] ?? 0.45) * 1.35, 32, 32]} />
+            <meshBasicMaterial color={HIGHLIGHT_COLOR} wireframe transparent opacity={0.5} />
           </mesh>
-        ))}
+        )}
 
         {molecule.bonds.map((bond, i) => {
           const a = atomMap[bond.from];
