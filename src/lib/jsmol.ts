@@ -62,7 +62,7 @@ export async function fetchMainIsomer(query: string): Promise<IsomerResult | nul
       const propRes = await fetch(
         `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/${kind}/${encodeURIComponent(
           q
-        )}/property/IUPACName,Title,IsomericSMILES,CID/JSON`
+        )}/property/IUPACName,Title,IsomericSMILES,MolecularFormula/JSON`
       );
       if (!propRes.ok) continue;
       const data = await propRes.json();

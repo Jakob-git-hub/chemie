@@ -126,7 +126,7 @@ export async function resolveCompound(rawQuery: string): Promise<CompoundInfo | 
       const propRes = await fetch(
         `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/${kind}/${encodeURIComponent(
           enQuery
-        )}/property/IUPACName,Title,IsomericSMILES,MolecularFormula,CID/JSON`
+        )}/property/IUPACName,Title,IsomericSMILES,MolecularFormula/JSON`
       );
       if (!propRes.ok) continue;
       const data = await propRes.json();
