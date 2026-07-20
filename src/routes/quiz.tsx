@@ -1,8 +1,10 @@
 import { Suspense, lazy, useMemo, useState } from 'react';
+import { HelpCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useChemistryStore } from '@/store/useChemistryStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import PageHeader from '@/components/PageHeader';
 
 const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
 
@@ -52,7 +54,13 @@ export default function Quiz() {
   const score = progress.filter((p) => p.correct).length;
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <>
+      <PageHeader
+        title="Quiz: Atome zählen"
+        description="Dreh das 3D-Modell, zähle die Atome eines Elements und prüfe dein Wissen. Dein Fortschritt wird mitverfolgt."
+        icon={<HelpCircle className="h-5 w-5" />}
+      />
+      <div className="grid gap-6 md:grid-cols-2">
       <Card>
         <CardHeader>
           <CardTitle>Quiz: {molecule.name}</CardTitle>
@@ -92,6 +100,7 @@ export default function Quiz() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

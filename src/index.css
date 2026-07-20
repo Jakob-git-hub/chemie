@@ -70,3 +70,52 @@
     radial-gradient(1000px 500px at 110% 10%, hsl(199 89% 28% / 0.35), transparent),
     linear-gradient(135deg, #0b1220 0%, #0f1b30 45%, #0a1424 100%);
 }
+
+/* ---------- Animationen & Feinschliff ---------- */
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.animate-modal {
+  animation: modal-in 0.18s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Sanfter Hover-Lift für Karten */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -12px hsl(var(--foreground) / 0.25);
+}
+
+/* Schlanke, moderne Scrollbar für horizontale Tabellen */
+.scroll-x-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+.scroll-x-thin::-webkit-scrollbar {
+  height: 8px;
+}
+.scroll-x-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 9999px;
+}

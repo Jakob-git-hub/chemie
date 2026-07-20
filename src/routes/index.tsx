@@ -1,7 +1,9 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import { MOLECULES } from '@/data/molecules';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import PageHeader from '@/components/PageHeader';
 
 // 3D-Modul wird erst bei Bedarf geladen (Bundle-schonend).
 const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
@@ -26,13 +28,19 @@ export default function Home() {
     : null;
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Willkommen im Chemie-Labor</CardTitle>
-          <CardDescription>
-            Erkunde Moleküle in 3D, teste dein Wissen im Quiz und lerne spielerisch.
-          </CardDescription>
+    <>
+      <PageHeader
+        title="Willkommen im Chemie-Labor"
+        description="Erkunde Moleküle in 3D, entdecke das Periodensystem und teste dein Wissen im Quiz – spielerisch und ganz ohne Server."
+        icon={<Sparkles className="h-5 w-5" />}
+      />
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Deine Lernplattform</CardTitle>
+            <CardDescription>
+              Erkunde Moleküle in 3D, teste dein Wissen im Quiz und lerne spielerisch.
+            </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p>
@@ -81,6 +89,7 @@ export default function Home() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

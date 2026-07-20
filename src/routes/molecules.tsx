@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Boxes } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useChemStore } from '@/store/useChemStore';
 import { checkAtomBalance } from '@/lib/api';
 import { parseSDF } from '@/lib/sdf';
+import PageHeader from '@/components/PageHeader';
 
 // 3D-Modul (React-Three-Fiber) wird erst bei Bedarf geladen.
 const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
@@ -92,7 +94,13 @@ export default function Molecules() {
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      <PageHeader
+        title="Moleküle & Reaktionen"
+        description="Lade 3D-Strukturen aus PubChem, gleiche Reaktionsgleichungen aus und simuliere Thermodynamik – alles lokal im Browser."
+        icon={<Boxes className="h-5 w-5" />}
+      />
+      <div className="space-y-6">
       {/* ---------- 1. Universelle 3D-Struktur-Suche ---------- */}
       <Card>
         <CardHeader>
@@ -314,6 +322,7 @@ export default function Molecules() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
