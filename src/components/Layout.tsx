@@ -2,12 +2,14 @@ import { useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useChemistryStore } from '@/store/useChemistryStore';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, FlaskConical } from 'lucide-react';
+import { Moon, Sun, FlaskConical, Home, Atom, Boxes, HelpCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const NAV = [
-  { to: '/', label: 'Start' },
-  { to: '/molecules', label: 'Moleküle' },
-  { to: '/quiz', label: 'Quiz' }
+  { to: '/', label: 'Start', icon: Home },
+  { to: '/periodic-table', label: 'Periodensystem', icon: Atom },
+  { to: '/molecules', label: 'Moleküle', icon: Boxes },
+  { to: '/quiz', label: 'Quiz', icon: HelpCircle }
 ];
 
 export default function Layout() {
@@ -19,13 +21,18 @@ export default function Layout() {
   }, [theme]);
 
   return (
-    <div className="app-gradient min-h-screen">
-      <header className="border-b bg-background/70 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between">
-          <NavLink to="/" className="flex items-center gap-2 font-bold text-primary">
-            <FlaskConical className="h-5 w-5" />
-            Chemie-Labor
+    <div className="app-gradient flex min-h-screen flex-col">
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
+        <div className="container flex h-16 items-center justify-between gap-4">
+          <NavLink to="/" className="flex items-center gap-2 font-bold">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm">
+              <FlaskConical className="h-5 w-5" />
+            </span>
+            <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-lg text-transparent">
+              Chemie-Labor
+            </span>
           </NavLink>
+
           <nav className="flex items-center gap-1">
             {NAV.map((item) => (
               <NavLink
@@ -33,26 +40,36 @@ export default function Layout() {
                 to={item.to}
                 end={item.to === '/'}
                 className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-accent'
-                  }`
+                  cn(
+                    'flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+                    isActive
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground'
+                  )
                 }
               >
-                {item.label}
+                <item.icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{item.label}</span>
               </NavLink>
             ))}
-            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Theme wechseln">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              aria-label="Theme wechseln"
+              className="ml-1"
+            >
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
           </nav>
         </div>
       </header>
 
-      <main className="container py-8">
+      <main className="container flex-1 py-8">
         <Outlet />
       </main>
 
-      <footer className="border-t py-6 text-center text-sm text-muted-foreground">
+      <footer className="border-t border-border/60 py-6 text-center text-sm text-muted-foreground">
         Interaktive Chemie-Lernplattform · lokal im Browser berechnet
       </footer>
     </div>
