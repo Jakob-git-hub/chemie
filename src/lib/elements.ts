@@ -2,7 +2,7 @@
 // Kategorie-Farben sind als echte Hex-Werte hinterlegt, damit sie per
 // Inline-Style (ohne Tailwind-Purge-Probleme) auf die Kacheln angewandt
 // werden können.
-import { ELEMENTS } from '@/data/elements';
+export { ELEMENTS } from '@/data/elements';
 
 export type ElementCategory =
   | 'alkali-metal'
