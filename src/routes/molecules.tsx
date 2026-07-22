@@ -114,13 +114,20 @@ export default function Molecules() {
             }}
             className="flex flex-col gap-2"
           >
+            <Label>Formel</Label>
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Name, SMILES oder Summenformel (z. B. Koffein, CCO, C6H12O6)"
             />
+            <Label>Masse (g)</Label>
+            <Input
+              value={mass}
+              onChange={(e) => setMass(e.target.value)}
+              placeholder="0.5"
+            />
             <Button type="submit">
-              Struktur laden
+              Struktur laden &amp; berechnen
             </Button>
           </form>
           <div className="flex flex-wrap gap-1.5">

@@ -123,7 +123,22 @@ export function parseFormula(input: string): FormulaResult {
   const composition = Object.keys(combined)
     .sort()
     .map((sym) => ({ sym, count: combined[sym] }));
-  return { ok: true, counts: combined, mass: Number(totalMass.toFixed(4)), composition };
+  const totalMass = main.mass;
+
+const combinedComposition = {};
+for (const sym in combined) {
+  const elementMass = ATOMIC_MASS[sym] || 0;
+  const elementMassContribution = combined[sym] * elementMass;
+  const percentage = (elementMassContribution / totalMass) * 100;
+  combinedComposition[sym] = { count: combined[sym], percentage: Number(percentage.toFixed(2)) };
+}
+
+return {
+  ok: true,
+  counts: combined,
+  mass: Number(totalMass.toFixed(4)),
+  composition: combinedComposition
+};
 }
 
 // ---- Reaktions-Ausgleich über exakte rationale Lineare Algebra ----
