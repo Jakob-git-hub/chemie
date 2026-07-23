@@ -29,7 +29,7 @@ export interface ParseResult {
   ok: true;
   counts: Record<string, number>;
   mass: number;
-  composition: { sym: string; count: number }[];
+  composition: Record<string, { count: number, percentage: number }>;
 }
 export interface ParseError {
   ok: false;
@@ -99,9 +99,11 @@ function parseComponent(comp: string): FormulaResult {
   const counts = stack[0];
   let mass = 0;
   for (const sym in counts) mass += ATOMIC_MASS[sym] * counts[sym];
-  const composition = Object.keys(counts)
-    .sort()
-    .map((sym) => ({ sym, count: counts[sym] }));
+  const total = mass;
+  const composition: Record<string, { count: number, percentage: number }> = {};
+  for (const sym in counts) {
+    composition[sym] = { count: counts[sym], percentage: Number(((ATOMIC_MASS[sym] * counts[sym] / total) * 100).toFixed(2)) };
+  }
   return { ok: true, counts, mass: Number(mass.toFixed(4)), composition };
 }
 
@@ -123,7 +125,6 @@ export function parseFormula(input: string): FormulaResult {
   const composition = Object.keys(combined)
     .sort()
     .map((sym) => ({ sym, count: combined[sym] }));
-  const totalMass = main.mass;
 
 const combinedComposition = {};
 for (const sym in combined) {
