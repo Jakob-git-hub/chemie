@@ -5,6 +5,8 @@ import * as THREE from 'three';
 import type { Molecule } from '@/lib/types';
 import { parseSDF } from '@/lib/sdf';
 import { useChemStore } from '@/store/useChemStore';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 // CPK-ähnliche Element-Farbzuordnung
 const ELEMENT_COLORS: Record<string, string> = {
