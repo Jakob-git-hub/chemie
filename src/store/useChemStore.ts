@@ -62,6 +62,7 @@ interface ChemState {
   setJsmolReady: (b: boolean) => void;
   setOverride: (formula: string, key: 'dHf' | 'S', value: number) => void;
   loadMolecule: (q: string) => Promise<void>;
+  loadMissingThermo: (missing: string[]) => Promise<void>;
   analyze: (eq: string) => void;
   computeDeltaG: () => void;
 }
@@ -178,6 +179,24 @@ export const useChemStore = create<ChemState>((set, get) => ({
     if (get().equation) get().analyze(get().equation); // Gibbs reaktiv neu verrechnen
   },
 
+  // Lädt alle fehlenden Thermodaten parallel (kein Loop, kein Absturz)
+  loadMissingThermo: async (missing: string[]) => {
+    if (missing.length === 0) return;
+    const promises = missing.map(async (formula) => {
+      try {
+        const info = await resolveCompound(formula);
+        if (!info) return;
+        const thermo = await fetchThermo(info.cid, info.formula);
+        if (thermo.hFormation == null && thermo.entropy == null) return;
+        set((s) => ({ thermoCache: { ...s.thermoCache, [formula]: thermo } }));
+      } catch {
+        /* still fehlend -> manuelle Eingabe im UI */
+      }
+    });
+    await Promise.all(promises);
+    if (get().equation) get().analyze(get().equation); // Gibbs reaktiv neu verrechnen
+  },
+
   analyze: (eqRaw) => {
     const res = analyzeReaction(eqRaw);
     if (!res.ok) {
@@ -198,7 +217,7 @@ export const useChemStore = create<ChemState>((set, get) => ({
     const g = computeGibbs(r, p, get().temperature);
     set({ deltaH: g.deltaH, deltaS: g.deltaS, deltaG: g.deltaG, missingThermo: g.missing });
 
-    if (g.missing.length) void refreshMissing(g.missing, set, get);
+    if (g.missing.length) void get().loadMissingThermo(g.missing);
   },
 
   computeDeltaG: () => {
