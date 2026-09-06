@@ -1,5 +1,5 @@
 import { Suspense, lazy, useMemo, useState } from 'react';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useChemistryStore } from '@/store/useChemistryStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ export default function Quiz() {
   const [selected, setSelected] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const addResult = useChemistryStore((s) => s.addResult);
+  const resetProgress = useChemistryStore((s) => s.resetProgress);
   const progress = useChemistryStore((s) => s.quizProgress);
 
   const question = useMemo(() => {
@@ -52,6 +53,7 @@ export default function Quiz() {
   };
 
   const score = progress.filter((p) => p.correct).length;
+  const accuracy = progress.length > 0 ? Math.round((score / progress.length) * 100) : 0;
 
   return (
     <>
@@ -77,26 +79,59 @@ export default function Quiz() {
           <CardTitle>Wie viele {question.element}-Atome?</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Antwortmöglichkeiten">
             {question.options.map((opt) => (
               <Button
                 key={opt}
                 variant={selected === String(opt) ? 'default' : 'outline'}
                 onClick={() => check(opt)}
                 disabled={selected !== null}
+                aria-pressed={selected === String(opt)}
+                aria-label={`${opt} Atome`}
               >
                 {opt}
               </Button>
             ))}
           </div>
-          {feedback && <p className="text-sm font-medium">{feedback}</p>}
+          {feedback && (
+            <p
+              className={`text-sm font-medium ${feedback.startsWith('Richtig') ? 'text-green-600' : 'text-red-600'}`}
+              role="status"
+              aria-live="polite"
+            >
+              {feedback}
+            </p>
+          )}
           <div className="flex items-center justify-between pt-2">
-            <span className="text-xs text-muted-foreground">
-              Punkte: {score} / {progress.length}
-            </span>
-            <Button onClick={next} disabled={selected === null}>
-              Nächste Frage →
-            </Button>
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground">
+                Punkte: {score} / {progress.length}
+              </span>
+              {progress.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  Genauigkeit: {accuracy}%
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {progress.length > 0 && (
+                <Button
+                  onClick={() => {
+                    if (window.confirm('Fortschritt wirklich zurücksetzen?')) {
+                      resetProgress();
+                    }
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Fortschritt zurücksetzen"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              )}
+              <Button onClick={next} disabled={selected === null}>
+                Nächste Frage →
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

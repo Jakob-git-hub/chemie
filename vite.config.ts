@@ -14,6 +14,19 @@ export default defineConfig({
   build: {
     outDir: 'docs',
     emptyOutDir: true,
-    target: 'es2020'
+    target: 'es2020',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Three.js ecosystem: shared across all 3D viewers
+          'vendor-three': ['three'],
+          'vendor-r3f': ['@react-three/fiber', '@react-three/drei'],
+          // React ecosystem
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // UI library
+          'vendor-ui': ['zustand', 'clsx', 'tailwind-merge', 'class-variance-authority']
+        }
+      }
+    }
   }
 });

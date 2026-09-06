@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { InfoCard, StatRow } from '@/components/ui/info-card';
 import { useChemStore } from '@/store/useChemStore';
 import { checkAtomBalance } from '@/lib/api';
 import { parseSDF } from '@/lib/sdf';
@@ -214,20 +215,25 @@ export default function Molecules() {
 
           {balance?.ok && balance.balanced && (
             <div className="space-y-3">
-              <p className="font-mono text-lg">{balance.balanced}</p>
+              <p className="font-mono text-lg" aria-label="Ausgeglichene Gleichung">
+                {balance.balanced}
+              </p>
               {check && (
                 <div className="text-sm">
                   <span className="font-medium">Atombilanz: </span>
                   {check.balanced ? (
-                    <span className="text-green-600">ausgeglichen ✓</span>
+                    <span className="text-green-600" role="status">ausgeglichen ✓</span>
                   ) : (
-                    <span className="text-red-600">nicht ausgeglichen ✗</span>
+                    <span className="text-red-600" role="status">nicht ausgeglichen ✗</span>
                   )}
-                  <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-xs">
+                  <div className="mt-1 grid grid-cols-3 gap-2">
                     {check.rows.map((r) => (
-                      <div key={r.element} className="rounded border p-1">
-                        {r.element}: {r.left} = {r.right}
-                      </div>
+                      <StatRow
+                        key={r.element}
+                        label={r.element}
+                        value={`${r.left} = ${r.right}`}
+                        ok={r.ok}
+                      />
                     ))}
                   </div>
                 </div>
@@ -243,22 +249,22 @@ export default function Molecules() {
           <CardTitle>Thermo-Engine &amp; Gibbs-Helmholtz-Simulator</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-lg border p-3">
-              <div className="text-xs text-muted-foreground">ΔH_R</div>
-              <div className="font-mono text-lg">{deltaH !== null ? `${deltaH.toFixed(1)}` : '–'}</div>
-              <div className="text-[10px] text-muted-foreground">kJ/mol</div>
-            </div>
-            <div className="rounded-lg border p-3">
-              <div className="text-xs text-muted-foreground">ΔS_R</div>
-              <div className="font-mono text-lg">{deltaS !== null ? `${deltaS.toFixed(1)}` : '–'}</div>
-              <div className="text-[10px] text-muted-foreground">J/(mol·K)</div>
-            </div>
-            <div className="rounded-lg border p-3">
-              <div className="text-xs text-muted-foreground">T</div>
-              <div className="font-mono text-lg">{temperature}</div>
-              <div className="text-[10px] text-muted-foreground">K</div>
-            </div>
+          <div className="grid grid-cols-3 gap-3" role="status" aria-live="polite">
+            <InfoCard
+              label="ΔH_R"
+              value={deltaH !== null ? deltaH.toFixed(1) : '–'}
+              unit="kJ/mol"
+            />
+            <InfoCard
+              label="ΔS_R"
+              value={deltaS !== null ? deltaS.toFixed(1) : '–'}
+              unit="J/(mol·K)"
+            />
+            <InfoCard
+              label="T"
+              value={temperature}
+              unit="K"
+            />
           </div>
 
           <div>
