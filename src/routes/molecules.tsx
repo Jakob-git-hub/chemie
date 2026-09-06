@@ -8,6 +8,7 @@ import { InfoCard, StatRow } from '@/components/ui/info-card';
 import { useChemStore } from '@/store/useChemStore';
 import { checkAtomBalance } from '@/lib/api';
 import { parseSDF } from '@/lib/sdf';
+import { EquationBalancer } from '@/components/BalanceSteps';
 import PageHeader from '@/components/PageHeader';
 
 // 3D-Modul (React-Three-Fiber) wird erst bei Bedarf geladen.
@@ -242,6 +243,9 @@ export default function Molecules() {
           )}
         </CardContent>
       </Card>
+
+      {/* ---------- 2b. Schritt-für-Schritt Reaktionsausgleich ---------- */}
+      <EquationBalancer onBalance={analyze} />
 
       {/* ---------- 3. Live-gekoppelte Thermo-Engine (Gibbs-Helmholtz) ---------- */}
       <Card>
