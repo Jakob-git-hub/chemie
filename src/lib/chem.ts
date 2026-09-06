@@ -126,7 +126,7 @@ export function parseFormula(input: string): FormulaResult {
     .sort()
     .map((sym) => ({ sym, count: combined[sym] }));
 
-const combinedComposition = {};
+const combinedComposition: Record<string, { count: number; percentage: number }> = {};
 for (const sym in combined) {
   const elementMass = ATOMIC_MASS[sym] || 0;
   const elementMassContribution = combined[sym] * elementMass;
