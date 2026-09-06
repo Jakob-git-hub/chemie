@@ -6,9 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { InfoCard, StatRow } from '@/components/ui/info-card';
 import { useChemStore } from '@/store/useChemStore';
+import { useChemistryStore } from '@/store/useChemistryStore';
 import { checkAtomBalance } from '@/lib/api';
 import { parseSDF } from '@/lib/sdf';
 import { EquationBalancer } from '@/components/BalanceSteps';
+import { FavoritesAndHistory, FavoriteButton } from '@/components/FavoritesAndHistory';
 import PageHeader from '@/components/PageHeader';
 
 // 3D-Modul (React-Three-Fiber) wird erst bei Bedarf geladen.
@@ -63,8 +65,10 @@ export default function Molecules() {
     setTemperature,
     loadMolecule,
     analyze,
-    setOverride
+    setOverride,
   } = useChemStore();
+
+  const { addToHistory } = useChemistryStore();
 
   // PubChem-SDF (3D) -> Molecule für den React-Three-Fiber-Viewer.
   // Völlig ohne externes JSmol/CDN – daher im Browser zuverlässig.
@@ -112,6 +116,7 @@ export default function Molecules() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              addToHistory(query);
               void loadMolecule(query);
             }}
             className="flex flex-col gap-2"
@@ -145,13 +150,15 @@ export default function Molecules() {
           </div>
           {searchStatus && <p className="text-sm text-muted-foreground">{searchStatus}</p>}
           {isomer && (
-            <p className="text-sm">
-              <span className="font-medium">Hauptisomer:</span> {isomer.name}{' '}
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-medium">Hauptisomer:</span>
+              <span className="font-mono">{isomer.name}</span>
+              <FavoriteButton formula={isomer.formula} />
               <span className="text-muted-foreground">
                 (CID {isomer.cid}
                 {isomer.smiles ? ` · ${isomer.smiles}` : ''})
               </span>
-            </p>
+            </div>
           )}
 
           {/* 3D-Viewer (React-Three-Fiber) – keine externe CDN-Abhängigkeit */}
@@ -333,6 +340,19 @@ export default function Molecules() {
           )}
         </CardContent>
       </Card>
+
+      {/* ---------- 4. Favoriten & Verlauf ---------- */}
+      <FavoritesAndHistory
+        onSelectMolecule={(formula) => {
+          setQuery(formula);
+          addToHistory(formula);
+          void loadMolecule(formula);
+        }}
+        onSelectEquation={(eq) => {
+          setEquation(eq);
+          analyze(eq);
+        }}
+      />
       </div>
     </>
   );
