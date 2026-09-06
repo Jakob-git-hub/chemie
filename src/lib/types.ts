@@ -15,6 +15,12 @@ export interface Molecule {
   formula: string;
   atoms: Atom[];
   bonds: Bond[];
+  // Quiz-spezifische Felder
+  functionalGroups?: string[];
+  difficulty?: 'beginner' | 'advanced' | 'expert';
+  hints?: string[];
+  iupacName?: string;
+  category?: string;
 }
 
 export interface QuizResult {
