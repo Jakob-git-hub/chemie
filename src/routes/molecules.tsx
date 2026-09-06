@@ -120,12 +120,6 @@ export default function Molecules() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Name, SMILES oder Summenformel (z. B. Koffein, CCO, C6H12O6)"
             />
-            <Label>Masse (g)</Label>
-            <Input
-              value={mass}
-              onChange={(e) => setMass(e.target.value)}
-              placeholder="0.5"
-            />
             <Button type="submit">
               Struktur laden &amp; berechnen
             </Button>
