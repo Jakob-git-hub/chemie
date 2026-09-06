@@ -1,9 +1,10 @@
-import { Component } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import ErrorCard from './ErrorCard';
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
   fallbackError?: string;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface State {
@@ -18,10 +19,20 @@ export default class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    console.error('[ErrorBoundary]', error, errorInfo);
+    this.props.onError?.(error, errorInfo);
+  }
+
+  handleReset = (): void => {
+    this.setState({ hasError: false, error: null });
+  };
+
   render() {
     if (this.state.hasError) {
-      const errorMessage = this.props.fallbackError || this.state.error?.message || 'An unexpected error occurred';
-      return <ErrorCard error={errorMessage} />;
+      const errorMessage =
+        this.props.fallbackError || this.state.error?.message || 'Ein unerwarteter Fehler ist aufgetreten.';
+      return <ErrorCard error={errorMessage} onRetry={this.handleReset} />;
     }
     return this.props.children;
   }

@@ -41,6 +41,11 @@ export default function ElementDetail({ element, onClose }: ElementDetailProps) 
     };
     window.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
+
+    // Focus the close button on mount for keyboard users
+    const closeButton = document.querySelector<HTMLButtonElement>('[aria-label="Schließen"]');
+    closeButton?.focus();
+
     return () => {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
