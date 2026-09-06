@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useChemistryStore } from '@/store/useChemistryStore';
 import { Button } from '@/components/ui/button';
 import { Moon, Sun, FlaskConical, Home, Atom, Boxes, HelpCircle, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SettingsPanel, SettingsButton } from '@/components/SettingsPanel';
 
 const NAV = [
   { to: '/', label: 'Start', icon: Home },
@@ -16,6 +17,7 @@ const NAV = [
 export default function Layout() {
   const theme = useChemistryStore((s) => s.theme);
   const toggleTheme = useChemistryStore((s) => s.toggleTheme);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -79,12 +81,12 @@ export default function Layout() {
                 )}
               </NavLink>
             ))}
+            <SettingsButton onClick={() => setSettingsOpen(true)} />
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
               aria-label={theme === 'dark' ? 'Zu hellem Modus wechseln' : 'Zu dunklem Modus wechseln'}
-              className="ml-1"
             >
               {theme === 'dark' ? (
                 <Sun className="h-5 w-5" aria-hidden="true" />
@@ -95,6 +97,8 @@ export default function Layout() {
           </nav>
         </div>
       </header>
+
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       <main id="main-content" className="container flex-1 py-8" tabIndex={-1}>
         <Outlet />
