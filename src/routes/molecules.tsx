@@ -7,14 +7,17 @@ import { Label } from '@/components/ui/label';
 import { InfoCard, StatRow } from '@/components/ui/info-card';
 import { useChemStore } from '@/store/useChemStore';
 import { useChemistryStore } from '@/store/useChemistryStore';
+import { useQuizStore } from '@/store/useQuizStore';
 import { checkAtomBalance } from '@/lib/api';
 import { parseSDF } from '@/lib/sdf';
 import { EquationBalancer } from '@/components/BalanceSteps';
 import { FavoritesAndHistory, FavoriteButton } from '@/components/FavoritesAndHistory';
+import { QuizOverlay, QuizStartButton } from '@/components/QuizOverlay';
 import PageHeader from '@/components/PageHeader';
 
 // 3D-Modul (React-Three-Fiber) wird erst bei Bedarf geladen.
 const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
+const MoleculeQuizViewer = lazy(() => import('@/components/MoleculeQuizViewer'));
 
 // --- MathJax-Bootstrap (einmalig) für den Formelsatz ---
 function useMathJax() {
@@ -69,6 +72,7 @@ export default function Molecules() {
   } = useChemStore();
 
   const { addToHistory } = useChemistryStore();
+  const { gameMode, currentQuestion } = useQuizStore();
 
   // PubChem-SDF (3D) -> Molecule für den React-Three-Fiber-Viewer.
   // Völlig ohne externes JSmol/CDN – daher im Browser zuverlässig.
@@ -107,10 +111,16 @@ export default function Molecules() {
         icon={<Boxes className="h-5 w-5" />}
       />
       <div className="space-y-6">
+      {/* ---------- Quiz Overlay (wird angezeigt wenn Quiz aktiv) ---------- */}
+      <QuizOverlay />
+
       {/* ---------- 1. Universelle 3D-Struktur-Suche ---------- */}
       <Card>
         <CardHeader>
-          <CardTitle>Universelle 3D-Struktur-Suche</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Universelle 3D-Struktur-Suche</CardTitle>
+            <QuizStartButton />
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <form
@@ -165,7 +175,14 @@ export default function Molecules() {
           {molecule ? (
             <>
               <Suspense fallback={<div className="h-[440px] animate-pulse rounded-xl bg-muted" />}>
-                <MoleculeViewer molecule={molecule} height={440} onSelectAtom={setSelectedAtomId} />
+                {gameMode !== 'idle' && currentQuestion ? (
+                  <MoleculeQuizViewer
+                    molecule={currentQuestion.molecule}
+                    height={440}
+                  />
+                ) : (
+                  <MoleculeViewer molecule={molecule} height={440} onSelectAtom={setSelectedAtomId} />
+                )}
               </Suspense>
               {selectedAtom ? (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
