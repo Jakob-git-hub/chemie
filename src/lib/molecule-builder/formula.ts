@@ -55,7 +55,7 @@ function toSubscript(num: number): string {
 export function computeMolarMass(atoms: BuildableAtom[]): number {
   let mass = 0;
   for (const atom of atoms) {
-    const atomicMass = ATOMIC_MASS[atom.element] ?? ELEMENT_DATA[atom.element]?.default ?? 0;
+    const atomicMass = ATOMIC_MASS[atom.element] ?? 0;
     mass += atomicMass;
   }
   return Math.round(mass * 1000) / 1000; // Round to 3 decimal places
