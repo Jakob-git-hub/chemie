@@ -118,6 +118,17 @@ export const useMoleculeBuilderStore = create<MoleculeBuilderState>()(
       addBond: (from, to, order = 1) => {
         if (from === to) return null;
 
+        const { atoms, bonds } = get();
+        if (!atoms.some(a => a.id === from) || !atoms.some(a => a.id === to)) {
+          return null;
+        }
+
+        const exists = bonds.some(b =>
+          (b.from === from && b.to === to) ||
+          (b.from === to && b.to === from)
+        );
+        if (exists) return null;
+
         get().pushHistory();
 
         const id = generateBondId();
