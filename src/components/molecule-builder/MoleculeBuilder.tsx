@@ -161,7 +161,7 @@ export default function MoleculeBuilder() {
                 mode={mode}
                 selectedElement={selectedElement}
                 selectedAtomId={selectedAtomId}
-                pendingBondFrom={null}
+                pendingBondFrom={mode === 'addBond' ? selectedAtomId : null}
                 onAddAtom={addAtom}
                 onRemoveAtom={removeAtom}
                 onMoveAtom={moveAtom}
