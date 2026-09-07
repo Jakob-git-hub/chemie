@@ -31,24 +31,25 @@ describe('validateMolecule', () => {
     expect(result.valid).toBe(true);
   });
 
-  it('detects valency exceeded for carbon with too many bonds', () => {
+  it('detects valency exceeded for carbon with too many single bonds', () => {
     const atoms: BuildableAtom[] = [
       { id: 'C1', element: 'C', position: { x: 0, y: 0 }, charge: 0 },
       { id: 'H1', element: 'H', position: { x: 0, y: 0 }, charge: 0 },
       { id: 'H2', element: 'H', position: { x: 0, y: 0 }, charge: 0 },
       { id: 'H3', element: 'H', position: { x: 0, y: 0 }, charge: 0 },
-      { id: 'H4', element: 'H', position: { x: 0, y: 0 }, charge: 0 }
+      { id: 'H4', element: 'H', position: { x: 0, y: 0 }, charge: 0 },
+      { id: 'H5', element: 'H', position: { x: 0, y: 0 }, charge: 0 }
     ];
-    // This would be 5 bonds - valid for C
     const bonds: BuildableBond[] = [
       { id: 'b1', from: 'C1', to: 'H1', order: 1 },
       { id: 'b2', from: 'C1', to: 'H2', order: 1 },
       { id: 'b3', from: 'C1', to: 'H3', order: 1 },
-      { id: 'b4', from: 'C1', to: 'H4', order: 1 }
+      { id: 'b4', from: 'C1', to: 'H4', order: 1 },
+      { id: 'b5', from: 'C1', to: 'H5', order: 1 }
     ];
     const result = validateMolecule(atoms, bonds);
-    // 4 bonds is valid for C
-    expect(result.valid).toBe(true);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.type === 'valency_exceeded')).toBe(true);
   });
 
   it('detects disconnected atoms as warnings', () => {
