@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/PageHeader';
 
-const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
+const UnifiedMoleculeViewer = lazy(() => import('@/components/UnifiedMoleculeViewer'));
 
 export default function Quiz() {
   const [molecule, setMolecule] = useState(() => api.getRandomMolecule());
@@ -69,7 +69,7 @@ export default function Quiz() {
         </CardHeader>
         <CardContent>
           <Suspense fallback={<div className="h-[420px] animate-pulse rounded-xl bg-muted" />}>
-            <MoleculeViewer molecule={molecule} onSelectAtom={setSelected} />
+            <UnifiedMoleculeViewer molecule={molecule} onSelectAtom={setSelected} />
           </Suspense>
         </CardContent>
       </Card>
@@ -94,13 +94,13 @@ export default function Quiz() {
             ))}
           </div>
           {feedback && (
-            <p
+            <div
               className={`text-sm font-medium ${feedback.startsWith('Richtig') ? 'text-green-600' : 'text-red-600'}`}
               role="status"
               aria-live="polite"
             >
               {feedback}
-            </p>
+            </div>
           )}
           <div className="flex items-center justify-between pt-2">
             <div className="flex flex-col">

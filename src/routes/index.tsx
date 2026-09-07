@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/PageHeader';
 
 // 3D-Modul wird erst bei Bedarf geladen (Bundle-schonend).
-const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
+const UnifiedMoleculeViewer = lazy(() => import('@/components/UnifiedMoleculeViewer'));
 
 export default function Home() {
   const [idx, setIdx] = useState(0);
@@ -64,7 +64,7 @@ export default function Home() {
         </CardHeader>
         <CardContent className="space-y-3">
           <Suspense fallback={<div className="h-[420px] animate-pulse rounded-xl bg-muted" />}>
-            <MoleculeViewer molecule={molecule} onSelectAtom={setSelectedAtomId} />
+            <UnifiedMoleculeViewer molecule={molecule} onSelectAtom={setSelectedAtomId} />
           </Suspense>
 
           {selectedAtom ? (

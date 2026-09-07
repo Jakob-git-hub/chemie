@@ -23,6 +23,10 @@ interface AtomMeshProps {
   id: string;
 }
 
+/**
+ * @deprecated Use UnifiedMoleculeViewer instead. This file is kept for backward
+ * compatibility but will be removed in a future version.
+ */
 const AtomMesh = memo(function AtomMesh({
   position, element, isSelected, renderMode, onClick, id,
 }: AtomMeshProps) {

@@ -18,10 +18,31 @@ export default function Layout() {
   const theme = useChemistryStore((s) => s.theme);
   const toggleTheme = useChemistryStore((s) => s.toggleTheme);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
+  // Hydration-safe theme initialization
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
+    setMounted(true);
+  }, []);
+
+  // Sync theme to document (runs client-side only to avoid hydration mismatch)
+  useEffect(() => {
+    if (!mounted) return;
+
+    const root = document.documentElement;
+
+    // Remove all theme classes/attributes first
+    root.classList.remove('dark');
+    root.removeAttribute('data-theme');
+
+    // Apply current theme
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else if (theme === 'claude') {
+      root.setAttribute('data-theme', 'claude');
+    }
+    // 'light' is the default - no class needed
+  }, [theme, mounted]);
 
   const handleSkipToContent = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -86,9 +107,9 @@ export default function Layout() {
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              aria-label={theme === 'dark' ? 'Zu hellem Modus wechseln' : 'Zu dunklem Modus wechseln'}
+              aria-label={mounted && theme === 'dark' ? 'Zu hellem Modus wechseln' : 'Zu dunklem Modus wechseln'}
             >
-              {theme === 'dark' ? (
+              {mounted && theme === 'dark' ? (
                 <Sun className="h-5 w-5" aria-hidden="true" />
               ) : (
                 <Moon className="h-5 w-5" aria-hidden="true" />

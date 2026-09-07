@@ -10,7 +10,7 @@ interface ChemistryState {
   addResult: (r: QuizResult) => void;
   resetProgress: () => void;
 
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | 'claude';
   toggleTheme: () => void;
 
   // Favorites & History
@@ -34,7 +34,11 @@ export const useChemistryStore = create<ChemistryState>()(
       resetProgress: () => set({ quizProgress: [] }),
 
       theme: 'light',
-      toggleTheme: () => set((s) => ({ theme: s.theme === 'light' ? 'dark' : 'light' })),
+      toggleTheme: () => set((s) => {
+        const next: ChemistryState['theme'] =
+          s.theme === 'light' ? 'dark' : s.theme === 'dark' ? 'claude' : 'light';
+        return { theme: next };
+      }),
 
       // Favorites & History
       favorites: [],

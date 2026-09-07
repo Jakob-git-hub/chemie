@@ -109,7 +109,7 @@ export default function PeriodicTable() {
       {/* Periodensystem */}
       <div className="scroll-x-thin overflow-x-auto pb-2">
         <div
-          className="mx-auto grid min-w-[820px] gap-1 animate-fade-in"
+          className="mx-auto grid min-w-[720px] gap-1 animate-fade-in sm:min-w-[820px]"
           style={{
             gridTemplateColumns: `18px repeat(${GRID_COLUMNS}, minmax(0, 1fr))`,
             gridTemplateRows: `18px repeat(10, auto)`
@@ -211,8 +211,9 @@ function FilterChip({
       onClick={onClick}
       style={style}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all',
+        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium transition-all sm:px-3 sm:py-1 sm:text-xs',
         'border border-transparent hover:scale-105',
+        'min-h-[36px] min-w-[36px]', // Touch targets
         !active && !style && 'bg-muted text-muted-foreground hover:bg-accent',
         active && 'ring-2 ring-offset-1 ring-foreground ring-offset-background',
         className
