@@ -5,48 +5,42 @@
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Interaktive Chemie-Lernplattform: 3D-Molekül-Visualisierung, Molrechner, Periodensystem, Quiz." />
+  <meta name="theme-color" content="#fff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)" />
   <title>Chemie-Labor • Interaktive Lernplattform</title>
-  <!-- THEME SWITCHER -->
-  <div class="theme-switcher">
-    <label for="theme-select" class="theme-switcher-label">Theme:</label>
-    <select id="theme-select" class="theme-switcher-select">
-      <option value="default">Default (Light)</option>
-      <option value="dark">Dark</option>
-      <option value="claude">Claude Calm</option>
-    </select>
-  </div>
+  <!-- Preconnect to PubChem CDN for faster molecule loading -->
+  <link rel="preconnect" href="https://pubchem.ncbi.nlm.nih.gov" />
+  <!-- Pre-fetch MathJax for formula rendering -->
+  <link rel="prefetch" href="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" as="script" />
+  <!-- Accessible theme toggle - moved to UI via SettingsPanel -->
 </head>
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
-  <!-- THEME SCRIPT -->
+  <!-- Theme initialization - runs synchronously to avoid FOUD flash -->
   <script>
-    // Theme logic - pure vanilla JS
-    const THEME_KEY = "preferred-theme";
-    const root = document.documentElement;
+    (function() {
+      const THEME_KEY = 'preferred-theme';
+      const root = document.documentElement;
+      const saved = localStorage.getItem(THEME_KEY);
 
-    function applyTheme(theme) {
-      root.removeAttribute("data-theme");
-      if (theme === "claude") {
-        root.setAttribute("data-theme", "claude");
-      } else if (theme === "dark") {
-        root.classList.add("dark");
+      // Apply saved theme immediately (before React loads)
+      if (saved === 'dark') {
+        root.classList.add('dark');
+      } else if (saved === 'claude') {
+        root.setAttribute('data-theme', 'claude');
       }
-      localStorage.setItem(THEME_KEY, theme);
-    }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const saved = localStorage.getItem(THEME_KEY) || "default";
-      const select = document.getElementById("theme-select");
-
-      Array.from(select.options).forEach(opt => {
-        if (opt.value === saved) opt.selected = true;
-      });
-
-      applyTheme(saved);
-
-      select.addEventListener("change", (e) => applyTheme(e.target.value));
-    });
+      // Respect system preference if no saved preference
+      if (!saved) {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const prefersClaude = window.matchMedia('(prefers-color-scheme: dark)').matches &&
+                              localStorage.getItem('claude-preference') === 'true';
+        if (prefersDark && !prefersClaude) {
+          root.classList.add('dark');
+        }
+      }
+    })();
   </script>
 </body>
 </html>
