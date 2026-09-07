@@ -9,33 +9,5 @@
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
     "playwright@claude-plugins-official": true
-  },
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "timeout": 30,
-            "statusMessage": "Erstelle Feature-Branch für diese Session …",
-            "command": "PROTECTED=main; LBF=\"$(git rev-parse --show-toplevel 2>/dev/null)/.claude/last-branch.txt\"; LB=\"\"; if [ -f \"$LBF\" ]; then LB=$(cat \"$LBF\" 2>/dev/null); fi; if [ -n \"$LB\" ] && [ \"$LB\" != \"$PROTECTED\" ] && command -v gh >/dev/null 2>&1; then PS=$(gh pr list --head \"$LB\" --jq '.[0].state' 2>/dev/null); if [ \"$PS\" = \"MERGED\" ] || [ \"$PS\" = \"CLOSED\" ]; then echo \"Branch $LB $PS — deleting…\"; git branch -D \"$LB\" 2>/dev/null || true; git push origin --delete \"$LB\" 2>/dev/null || true; rm -f \"$LBF\" 2>/dev/null; fi; fi; B=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true); if [ \"$B\" = \"$PROTECTED\" ]; then TS=$(date +%Y%m%d-%H%M%S); NB=\"claude/${TS}-$$\"; git checkout -b \"$NB\" >/dev/null 2>&1 && echo \"Feature-Branch erstellt: $NB\"; echo \"$NB\" > \"$LBF\" 2>/dev/null; fi; exit 0"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "timeout": 120,
-            "statusMessage": "Push & Pull Request öffnen …",
-            "command": "PROTECTED=main; B=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true); if [ \"$B\" = \"$PROTECTED\" ] || [ -z \"$B\" ]; then exit 0; fi\n\n# Push the branch and track it upstream\ngit push -u origin \"$B\" 2>&1 | tail -3\n\n# Remember which branch we pushed for next session's cleanup\necho \"$B\" > \"$(git rev-parse --show-toplevel)/.claude/last-branch.txt\" 2>/dev/null\n\n# Create PR if none exists\nif command -v gh >/dev/null 2>&1; then\n  EX=$(gh pr list --head \"$B\" --json number -q 'length' 2>/dev/null || echo 0)\n  if [ \"${EX:-0}\" = \"0\" ]; then\n    gh pr create --fill --base \"$PROTECTED\" 2>&1 | tail -3\n  fi\nfi\n\nexit 0"
-          }
-        ]
-      }
-    ]
   }
 }
