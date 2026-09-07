@@ -164,6 +164,40 @@ export function validateMolecule(
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
 
+  // Validate bonds (self-bonds, duplicates, unknown atom references)
+  const atomIds = new Set(atoms.map(a => a.id));
+  const seenPairs = new Set<string>();
+  for (const bond of bonds) {
+    if (bond.from === bond.to) {
+      errors.push({
+        type: 'self_bond',
+        message: 'Ein Atom kann nicht mit sich selbst verbunden werden',
+        severity: 'error'
+      });
+      continue;
+    }
+
+    if (!atomIds.has(bond.from) || !atomIds.has(bond.to)) {
+      errors.push({
+        type: 'invalid_element',
+        message: 'Bindung referenziert ein unbekanntes Atom',
+        severity: 'error'
+      });
+      continue;
+    }
+
+    const key = bond.from < bond.to ? `${bond.from}|${bond.to}` : `${bond.to}|${bond.from}`;
+    if (seenPairs.has(key)) {
+      errors.push({
+        type: 'duplicate_bond',
+        message: 'Diese Bindung existiert bereits',
+        severity: 'error'
+      });
+    } else {
+      seenPairs.add(key);
+    }
+  }
+
   // Validate each atom
   for (const atom of atoms) {
     const error = validateAtomValency(atom, bonds);
