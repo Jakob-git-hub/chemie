@@ -1,62 +1,21 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, memo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import * as THREE from 'three';
 import type { Molecule } from '@/lib/types';
 import { useQuizStore } from '@/store/useQuizStore';
 import { findAtomsInFunctionalGroup } from '@/utils/quizGenerator';
 import { FUNCTIONAL_GROUPS, type FunctionalGroupKey } from '@/data/molecules';
+import {
+  ELEMENT_COLORS,
+  BALL_RADII,
+  CORRECT_COLOR,
+  INCORRECT_COLOR,
+  SELECTED_COLOR,
+  BOND_COLOR,
+  bondTransform,
+} from '@/lib/chemistry-constants';
 
-// CPK-ähnliche Element-Farbzuordnung
-const ELEMENT_COLORS: Record<string, string> = {
-  H: '#ffffff',
-  C: '#2b2b2b',
-  O: '#ff3b30',
-  N: '#2d6cff',
-  S: '#ffcc00',
-  P: '#ff9500',
-  Cl: '#34c759',
-  F: '#5ac8fa',
-  Br: '#a3331f',
-  I: '#6a0dad',
-  Na: '#ab5cf2',
-  Fe: '#e06633'
-};
-
-const ELEMENT_RADII: Record<string, number> = {
-  H: 1.2,
-  C: 1.7,
-  O: 1.52,
-  N: 1.55,
-  S: 1.8,
-  P: 1.8,
-  Cl: 1.75,
-  F: 1.47,
-  Br: 1.85,
-  I: 1.98,
-  Na: 2.27,
-  Fe: 2.0
-};
-
-const RADII: Record<string, number> = {
-  H: 0.32,
-  C: 0.45,
-  O: 0.42,
-  N: 0.43,
-  S: 0.55,
-  P: 0.55,
-  Cl: 0.55,
-  F: 0.4,
-  Br: 0.6,
-  I: 0.62,
-  Na: 0.6,
-  Fe: 0.55
-};
-
-const HIGHLIGHT_COLOR = '#00ff00';
-const CORRECT_COLOR = '#22c55e';
-const INCORRECT_COLOR = '#ef4444';
-const SELECTED_COLOR = '#ffcc00';
+const RADII = BALL_RADII;
 
 interface MoleculeQuizViewerProps {
   molecule: Molecule;
@@ -65,37 +24,23 @@ interface MoleculeQuizViewerProps {
   onIncorrectAnswer?: () => void;
 }
 
-function bondTransform(a: [number, number, number], b: [number, number, number]) {
-  const start = new THREE.Vector3(...a);
-  const end = new THREE.Vector3(...b);
-  const dir = new THREE.Vector3().subVectors(end, start);
-  const len = dir.length();
-  const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-  const quat = new THREE.Quaternion().setFromUnitVectors(
-    new THREE.Vector3(0, 1, 0),
-    dir.clone().normalize()
-  );
-  return { len, mid, quat };
-}
-
-export default function MoleculeQuizViewer({
+function MoleculeQuizViewerInner({
   molecule,
   height = 420,
   onCorrectAnswer,
-  onIncorrectAnswer
+  onIncorrectAnswer,
 }: MoleculeQuizViewerProps) {
   const {
     gameMode,
     currentQuestion,
     isAnswered,
     isCorrect,
-    selectedAnswer,
     selectAnswer
   } = useQuizStore();
 
   const atomMap = useMemo(() => {
     const map: Record<string, [number, number, number]> = {};
-    molecule.atoms.forEach((a) => (map[a.id] = a.position));
+    molecule.atoms.forEach((a) => { map[a.id] = a.position; });
     return map;
   }, [molecule]);
 
@@ -109,74 +54,46 @@ export default function MoleculeQuizViewer({
     return findAtomsInFunctionalGroup(currentQuestion.functionalGroupTarget, molecule);
   }, [gameMode, currentQuestion?.functionalGroupTarget, molecule]);
 
-  // Farbe basierend auf Quiz-Status
-  const getAtomColor = useCallback((atomId: string, element: string): string => {
-    // Immer Basis-Farbe
-    let baseColor = ELEMENT_COLORS[element] ?? '#cc44cc';
-
-    // Quiz-spezifische Farben
-    if (isAnswered) {
-      if (targetAtoms.includes(atomId)) {
-        // Dies ist ein Atom der gesuchten Gruppe
-        if (isCorrect) {
-          return CORRECT_COLOR;
-        } else if (gameMode === 'functional_groups' && selectedAtomId === atomId) {
-          return INCORRECT_COLOR;
-        }
-      }
-    }
-
-    // Ausgewähltes Atom im Funktionale-Gruppen-Modus
-    if (gameMode === 'functional_groups' && selectedAtomId === atomId) {
-      return SELECTED_COLOR;
-    }
-
-    return baseColor;
-  }, [isAnswered, isCorrect, targetAtoms, gameMode, selectedAtomId]);
+  // Stable target-set for O(1) lookup
+  const targetAtomsSet = useMemo(() => new Set(targetAtoms), [targetAtoms]);
 
   const handleAtomClick = useCallback((atomId: string) => {
     if (gameMode !== 'functional_groups' || isAnswered) return;
 
     setSelectedAtomId(atomId);
-
-    // Prüfe ob die Antwort korrekt ist
-    const isTargetAtom = targetAtoms.includes(atomId);
+    const isTargetAtom = targetAtomsSet.has(atomId);
 
     if (currentQuestion?.functionalGroupTarget) {
       const group = FUNCTIONAL_GROUPS[currentQuestion.functionalGroupTarget as FunctionalGroupKey];
       selectAnswer(group?.name || 'Unbekannte Gruppe');
     }
 
-    if (isTargetAtom) {
-      onCorrectAnswer?.();
-    } else {
-      onIncorrectAnswer?.();
-    }
-  }, [gameMode, isAnswered, targetAtoms, currentQuestion, selectAnswer, onCorrectAnswer, onIncorrectAnswer]);
+    if (isTargetAtom) onCorrectAnswer?.();
+    else onIncorrectAnswer?.();
+  }, [gameMode, isAnswered, targetAtomsSet, currentQuestion, selectAnswer, onCorrectAnswer, onIncorrectAnswer]);
 
   return (
     <div className="relative">
-      {/* Quiz-spezifisches Overlay */}
       {gameMode === 'functional_groups' && (
-        <div className="absolute top-3 left-3 z-10 rounded-lg bg-background/90 px-3 py-2 text-sm shadow-md backdrop-blur-sm">
-          <span className="font-medium">🔬 Klicke auf ein Atom der gesuchten funktionellen Gruppe!</span>
+        <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2 rounded-lg bg-background/90 px-3 py-2 text-sm shadow-md backdrop-blur-sm">
+          <span className="font-medium">🔬 Klicke auf ein Atom der gesuchten Gruppe</span>
         </div>
       )}
 
-      {/* Glow-Effekt basierend auf Antwort */}
       {isAnswered && (
         <div
-          className={`absolute inset-0 z-0 rounded-xl ${
+          className={`absolute inset-0 z-0 rounded-xl pointer-events-none ${
             isCorrect
-              ? 'animate-pulse shadow-[0_0_30px_rgba(34,197,94,0.5)]'
+              ? 'shadow-[0_0_30px_rgba(34,197,94,0.5)]'
               : 'shadow-[0_0_30px_rgba(239,68,68,0.5)]'
           }`}
+          aria-hidden="true"
         />
       )}
 
       <div
         style={{ height }}
-        className={`w-full overflow-hidden rounded-xl border transition-all duration-300 ${
+        className={`w-full overflow-hidden rounded-xl border transition-colors ${
           isAnswered
             ? isCorrect
               ? 'border-green-500 bg-gradient-to-br from-green-50/50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/30'
@@ -189,11 +106,25 @@ export default function MoleculeQuizViewer({
           <directionalLight position={[5, 5, 5]} intensity={0.8} />
           <directionalLight position={[-5, -3, -5]} intensity={0.3} />
 
-          {/* Atome */}
+          {/* Atoms */}
           {molecule.atoms.map((atom) => {
             const isSelected = atom.id === selectedAtomId;
-            const isTarget = targetAtoms.includes(atom.id);
+            const isTarget = targetAtomsSet.has(atom.id);
             const radius = RADII[atom.element] ?? 0.45;
+
+            let color = ELEMENT_COLORS[atom.element] ?? '#cc44cc';
+            let emissive: string = '#000000';
+            let emissiveIntensity = 0;
+
+            if (isAnswered && isTarget) {
+              color = isCorrect ? CORRECT_COLOR : (isSelected ? INCORRECT_COLOR : color);
+              emissive = isCorrect ? CORRECT_COLOR : INCORRECT_COLOR;
+              emissiveIntensity = 0.6;
+            } else if (isSelected) {
+              color = SELECTED_COLOR;
+              emissive = SELECTED_COLOR;
+              emissiveIntensity = 0.4;
+            }
 
             return (
               <mesh
@@ -206,9 +137,9 @@ export default function MoleculeQuizViewer({
               >
                 <sphereGeometry args={[radius, 32, 32]} />
                 <meshStandardMaterial
-                  color={getAtomColor(atom.id, atom.element)}
-                  emissive={isTarget && isAnswered ? (isCorrect ? CORRECT_COLOR : INCORRECT_COLOR) : (isSelected ? SELECTED_COLOR : '#000000')}
-                  emissiveIntensity={isTarget && isAnswered ? 0.6 : (isSelected ? 0.4 : 0)}
+                  color={color}
+                  emissive={emissive}
+                  emissiveIntensity={emissiveIntensity}
                   roughness={0.35}
                   metalness={0.1}
                 />
@@ -245,10 +176,7 @@ export default function MoleculeQuizViewer({
             return (
               <mesh key={`bond-${i}`} position={[mid.x, mid.y, mid.z]} quaternion={quat}>
                 <cylinderGeometry args={[0.08, 0.08, len, 16]} />
-                <meshStandardMaterial
-                  color="#9aa3b2"
-                  roughness={0.5}
-                />
+                <meshStandardMaterial color={BOND_COLOR} roughness={0.5} />
               </mesh>
             );
           })}
@@ -259,3 +187,6 @@ export default function MoleculeQuizViewer({
     </div>
   );
 }
+
+export default memo(MoleculeQuizViewerInner);
+
