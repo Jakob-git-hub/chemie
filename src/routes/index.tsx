@@ -74,12 +74,12 @@ export default function Home() {
           </div>
         </CardHeader>
         <CardContent>
-          <Link to="/molecule-builder">
-            <Button className="w-full sm:w-auto">
+          <Button asChild className="w-full sm:w-auto">
+            <Link to="/molecule-builder">
               Baukasten öffnen
               <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </CardContent>
       </Card>
 
