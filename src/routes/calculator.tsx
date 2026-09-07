@@ -500,7 +500,7 @@ export default function Calculator() {
       />
       <div className="space-y-6">
         <Tabs defaultValue="mass" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="mass">Molmasse</TabsTrigger>
             <TabsTrigger value="gas">Gasgesetze</TabsTrigger>
             <TabsTrigger value="conc">Konzentration</TabsTrigger>

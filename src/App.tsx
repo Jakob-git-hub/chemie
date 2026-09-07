@@ -5,6 +5,7 @@ import Molecules from '@/routes/molecules';
 import Quiz from '@/routes/quiz';
 import Calculator from '@/routes/calculator';
 import PeriodicTable from '@/routes/periodic-table';
+import MoleculeBuilderPage from '@/routes/molecule-builder';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/molecules" element={<Molecules />} />
           <Route path="/calculator" element={<Calculator />} />
           <Route path="/quiz" element={<Quiz />} />
+          <Route path="/molecule-builder" element={<MoleculeBuilderPage />} />
         </Route>
       </Routes>
     </ErrorBoundary>

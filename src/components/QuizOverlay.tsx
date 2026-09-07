@@ -283,10 +283,14 @@ export function QuizOverlay() {
 
         {/* Feedback / Erklärung */}
         {isAnswered && (
-          <div className={cn(
-            "rounded-lg p-3 text-sm",
-            isCorrect ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"
-          )}>
+          <div
+            className={cn(
+              "rounded-lg p-3 text-sm",
+              isCorrect ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"
+            )}
+            role="status"
+            aria-live="polite"
+          >
             <p className={cn(
               "font-medium",
               isCorrect ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"

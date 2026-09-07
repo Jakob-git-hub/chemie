@@ -16,8 +16,7 @@ import { QuizOverlay, QuizStartButton } from '@/components/QuizOverlay';
 import PageHeader from '@/components/PageHeader';
 
 // 3D-Modul (React-Three-Fiber) wird erst bei Bedarf geladen.
-const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
-const MoleculeQuizViewer = lazy(() => import('@/components/MoleculeQuizViewer'));
+const UnifiedMoleculeViewer = lazy(() => import('@/components/UnifiedMoleculeViewer'));
 
 // --- MathJax-Bootstrap (einmalig) für den Formelsatz ---
 function useMathJax() {
@@ -175,14 +174,15 @@ export default function Molecules() {
           {molecule ? (
             <>
               <Suspense fallback={<div className="h-[440px] animate-pulse rounded-xl bg-muted" />}>
-                {gameMode !== 'idle' && currentQuestion ? (
-                  <MoleculeQuizViewer
-                    molecule={currentQuestion.molecule}
-                    height={440}
-                  />
-                ) : (
-                  <MoleculeViewer molecule={molecule} height={440} onSelectAtom={setSelectedAtomId} />
-                )}
+                <UnifiedMoleculeViewer
+                  molecule={gameMode !== 'idle' && currentQuestion ? currentQuestion.molecule : molecule}
+                  height={440}
+                  onSelectAtom={setSelectedAtomId}
+                  quizMode={gameMode !== 'idle'}
+                  targetAtoms={[]}
+                  isAnswered={false}
+                  isCorrect={null}
+                />
               </Suspense>
               {selectedAtom ? (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
