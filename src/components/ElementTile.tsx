@@ -33,7 +33,7 @@ export default function ElementTile({ element, onSelect, dimmed, highlighted }: 
         highlighted && !dimmed && 'ring-2 ring-foreground ring-offset-2 shadow-lg'
       )}
       aria-label={`${element.name}, Ordnungszahl ${element.number}, Atommasse ${element.mass.toFixed(element.mass < 10 ? 3 : 2)}`}
-      aria-pressed={highlighted}
+      aria-current={highlighted ? 'true' : undefined}
     >
       <span className="text-[8px] font-semibold leading-none sm:text-[10px] md:text-xs" aria-hidden="true">
         {element.number}
