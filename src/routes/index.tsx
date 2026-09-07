@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Sparkles, Beaker, ArrowRight } from 'lucide-react';
 import { MOLECULES } from '@/data/molecules';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,7 +54,32 @@ export default function Home() {
             <li>Klicke ein Atom an, um es auszuwählen und zu markieren</li>
             <li>Interaktives Quiz mit Fortschrittstracking</li>
             <li>Erweiterbar um weitere Datenquellen (z.&nbsp;B. PubChem)</li>
+            <li><strong>Neu:</strong> Molekül-Baukasten zum Selberbauen!</li>
           </ul>
+        </CardContent>
+      </Card>
+
+      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Beaker className="h-5 w-5 text-primary" />
+                Neu: Molekül-Baukasten
+              </CardTitle>
+              <CardDescription>
+                Baue deine eigenen Moleküle, lerne Valenzregeln und sehe sie in 3D!
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Link to="/molecule-builder">
+            <Button className="w-full sm:w-auto">
+              Baukasten öffnen
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 

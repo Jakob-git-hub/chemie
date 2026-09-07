@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useChemistryStore } from '@/store/useChemistryStore';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, FlaskConical, Home, Atom, Boxes, HelpCircle, Calculator } from 'lucide-react';
+import { Moon, Sun, FlaskConical, Home, Atom, Boxes, HelpCircle, Calculator, Beaker } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SettingsPanel, SettingsButton } from '@/components/SettingsPanel';
 
@@ -10,6 +10,7 @@ const NAV = [
   { to: '/', label: 'Start', icon: Home },
   { to: '/periodic-table', label: 'Periodensystem', icon: Atom },
   { to: '/molecules', label: 'Moleküle', icon: Boxes },
+  { to: '/molecule-builder', label: 'Baukasten', icon: Beaker },
   { to: '/calculator', label: 'Rechner', icon: Calculator },
   { to: '/quiz', label: 'Quiz', icon: HelpCircle }
 ];
