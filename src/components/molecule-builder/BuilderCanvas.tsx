@@ -286,7 +286,7 @@ export default function BuilderCanvas({
             } else if (validation?.status === 'error') {
               strokeColor = 'hsl(var(--destructive))';
             } else if (validation?.status === 'warning') {
-              strokeColor = 'hsl(var(--warning))';
+              strokeColor = '#f59e0b';
             }
 
             return (
