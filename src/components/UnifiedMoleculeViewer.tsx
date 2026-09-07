@@ -232,13 +232,19 @@ function UnifiedMoleculeViewerInner({
     }
   }, [quizMode, isAnswered, targetAtomsSet, onSelectAtom, onCorrectAnswer, onIncorrectAnswer])
 
-  const handleSaveImage = useCallback(() => {
-    const canvas = document.querySelector('canvas')
-    if (!canvas) return
-    const link = document.createElement('a')
-    link.download = `${molecule.name || 'molecule'}.png`
-    link.href = canvas.toDataURL('image/png', 1.0)
-    link.click()
+  const handleSaveImage = useCallback((e: { currentTarget: HTMLButtonElement }) => {
+    let el: HTMLElement | null = e.currentTarget
+    while (el) {
+      const canvas = el.querySelector('canvas') as HTMLCanvasElement | null
+      if (canvas) {
+        const link = document.createElement('a')
+        link.download = `${molecule.name || 'molecule'}.png`
+        link.href = canvas.toDataURL('image/png', 1.0)
+        link.click()
+        return
+      }
+      el = el.parentElement
+    }
   }, [molecule.name])
 
   // Background color based on state
