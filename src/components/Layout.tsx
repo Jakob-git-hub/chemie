@@ -11,6 +11,7 @@ const NAV = [
   { to: '/periodic-table', label: 'Periodensystem', icon: Atom },
   { to: '/molecules', label: 'Moleküle', icon: Boxes },
   { to: '/molecule-builder', label: 'Baukasten', icon: Beaker },
+  { to: '/atom-builder', label: 'Atombaukasten', icon: Atom },
   { to: '/calculator', label: 'Rechner', icon: Calculator },
   { to: '/quiz', label: 'Quiz', icon: HelpCircle }
 ];
