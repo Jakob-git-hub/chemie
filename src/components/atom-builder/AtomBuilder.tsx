@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAtomBuilderStore } from '@/store/useAtomBuilderStore';
 import ParticlePalette from './ParticlePalette';
 import AtomBuilderCanvas from './AtomBuilderCanvas';
@@ -8,7 +8,22 @@ import { RotateCcw, Undo, Save, Download } from 'lucide-react';
 
 export default function AtomBuilder() {
   const store = useAtomBuilderStore();
-  const [canvasSize, setCanvasSize] = useState({ width: 600, height: 400 });
+  const fitCanvas = () => {
+    const w = typeof window !== 'undefined' ? window.innerWidth : 800;
+    const width = Math.max(280, Math.min(600, w - 72));
+    return { width, height: Math.round(width * 0.67) };
+  };
+  const [canvasSize, setCanvasSize] = useState(fitCanvas);
+
+  useEffect(() => {
+    const onResize = () => setCanvasSize((cur) => {
+      const fit = fitCanvas();
+      // Nur verkleinern, wenn der aktuelle Wert nicht mehr passt
+      return cur.width > fit.width ? fit : cur;
+    });
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // Event handlers for particle interactions
   const handleAddParticle = (type: 'proton' | 'neutron' | 'electron', position: { x: number; y: number }) => {
@@ -27,16 +42,16 @@ export default function AtomBuilder() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/30 p-4">
+    <div className="bg-gradient-to-br from-background to-muted/30">
       <div className="mx-auto max-w-7xl space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h1 className="text-3xl font-bold">Atombaukasten</h1>
-            <p className="text-muted-foreground">Baue Atome, selektiere Teilchen und sehe die Physik in Echtzeit</p>
+            <h1 className="text-2xl font-bold sm:text-3xl">Atombaukasten</h1>
+            <p className="text-sm text-muted-foreground">Baue Atome, selektiere Teilchen und sehe die Physik in Echtzeit</p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -44,7 +59,7 @@ export default function AtomBuilder() {
               className="gap-2"
             >
               <RotateCcw className="h-4 w-4" />
-              Zurücksetzen
+              <span className="hidden sm:inline">Zurücksetzen</span>
             </Button>
             <Button
               variant="outline"
@@ -54,7 +69,7 @@ export default function AtomBuilder() {
               className="gap-2"
             >
               <Undo className="h-4 w-4" />
-              Rückgängig
+              <span className="hidden sm:inline">Rückgängig</span>
             </Button>
           </div>
         </div>
@@ -62,7 +77,7 @@ export default function AtomBuilder() {
         {/* Main layout */}
         <div className="grid gap-6 lg:grid-cols-4">
           {/* Particle palette - left sidebar */}
-          <div className="lg:col-span-1 space-y-4 sticky top-24">
+          <div className="lg:col-span-1 space-y-4 lg:sticky lg:top-24">
             <ParticlePalette
               protonCount={store.protonCount}
               neutronCount={store.neutronCount}
@@ -121,7 +136,7 @@ export default function AtomBuilder() {
           </div>
 
           {/* Main canvas - center */}
-          <div className="lg:col-span-2 rounded-xl border border-border bg-card/70 p-4 shadow-sm backdrop-blur">
+          <div className="lg:col-span-2 overflow-x-auto rounded-xl border border-border bg-card/70 p-2 shadow-sm backdrop-blur sm:p-4">
             <h3 className="mb-4 text-sm font-medium">Arbeitsfläche</h3>
             <AtomBuilderCanvas
               protonCount={store.protonCount}

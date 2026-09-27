@@ -10,7 +10,7 @@ import { useChemistryStore } from '@/store/useChemistryStore';
 import { useQuizStore } from '@/store/useQuizStore';
 import { checkAtomBalance } from '@/lib/api';
 import { parseSDF } from '@/lib/sdf';
-import { EquationBalancer } from '@/components/BalanceSteps';
+import { BalanceSteps } from '@/components/BalanceSteps';
 import { FavoritesAndHistory, FavoriteButton } from '@/components/FavoritesAndHistory';
 import { QuizOverlay, QuizStartButton } from '@/components/QuizOverlay';
 import PageHeader from '@/components/PageHeader';
@@ -46,6 +46,7 @@ const EXAMPLES = ['Koffein', 'CCO', 'C6H12O6', 'Aspirin', 'Fe + O2 ->', 'CH4 + O
 export default function Molecules() {
   useMathJax();
   const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
+  const [showBalanceSteps, setShowBalanceSteps] = useState(false);
 
   const {
     query,
@@ -216,7 +217,7 @@ export default function Molecules() {
       {/* ---------- 2. Stöchiometrie- & Atombilanz-Prüfer ---------- */}
       <Card>
         <CardHeader>
-          <CardTitle>Stöchiometrie- &amp; Atombilanz-Prüfer</CardTitle>
+          <CardTitle>Reaktionsausgleich &amp; Atombilanz</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <form
@@ -265,11 +266,23 @@ export default function Molecules() {
               )}
             </div>
           )}
+
+          {balance?.ok && balance.balanced && (
+            <div className="space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowBalanceSteps((v) => !v)}
+                aria-expanded={showBalanceSteps}
+              >
+                {showBalanceSteps ? 'Schritte ausblenden' : 'Schritt-für-Schritt anzeigen'}
+              </Button>
+              {showBalanceSteps && <BalanceSteps equation={equation} />}
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      {/* ---------- 2b. Schritt-für-Schritt Reaktionsausgleich ---------- */}
-      <EquationBalancer onBalance={analyze} />
 
       {/* ---------- 3. Live-gekoppelte Thermo-Engine (Gibbs-Helmholtz) ---------- */}
       <Card>

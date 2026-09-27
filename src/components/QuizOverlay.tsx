@@ -111,7 +111,7 @@ export function QuizOverlay() {
                   variant={difficulty === d ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setDifficulty(d)}
-                  className="flex-1"
+                  className="flex-1 px-1 text-xs sm:px-3 sm:text-sm"
                 >
                   {d === 'beginner' && 'Anfänger'}
                   {d === 'advanced' && 'Fortgeschritten'}
@@ -130,7 +130,7 @@ export function QuizOverlay() {
           <div className="grid gap-3">
             <Button
               onClick={() => handleStartQuiz('identification')}
-              className="h-auto justify-start py-4 text-left"
+              className="h-auto justify-start whitespace-normal py-4 text-left"
               variant="default"
             >
               <div className="flex w-full items-center justify-between">
@@ -146,7 +146,7 @@ export function QuizOverlay() {
 
             <Button
               onClick={() => handleStartQuiz('functional_groups')}
-              className="h-auto justify-start py-4 text-left"
+              className="h-auto justify-start whitespace-normal py-4 text-left"
               variant="secondary"
             >
               <div className="flex w-full items-center justify-between">

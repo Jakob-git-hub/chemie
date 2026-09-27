@@ -85,7 +85,11 @@ function MolarMassCalculator() {
                 <InfoCard
                   key={sym}
                   label={sym}
-                  value={`${data.count} × ${ATOMIC_MASS[sym]?.toFixed(3) ?? '?'} g`}
+                  value={
+                    <span className="whitespace-nowrap text-base">
+                      {data.count} × {ATOMIC_MASS[sym]?.toFixed(3) ?? '?'} g
+                    </span>
+                  }
                 />
               ))}
             </div>
@@ -500,7 +504,7 @@ export default function Calculator() {
       />
       <div className="space-y-6">
         <Tabs defaultValue="mass" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="mass">Molmasse</TabsTrigger>
             <TabsTrigger value="gas">Gasgesetze</TabsTrigger>
             <TabsTrigger value="conc">Konzentration</TabsTrigger>

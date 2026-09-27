@@ -39,9 +39,7 @@ export default function Home() {
         <Card>
           <CardHeader>
             <CardTitle>Deine Lernplattform</CardTitle>
-            <CardDescription>
-              Erkunde Moleküle in 3D, teste dein Wissen im Quiz und lerne spielerisch.
-            </CardDescription>
+            <CardDescription>Alles an einem Ort – direkt im Browser.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p>
@@ -54,7 +52,6 @@ export default function Home() {
             <li>Klicke ein Atom an, um es auszuwählen und zu markieren</li>
             <li>Interaktives Quiz mit Fortschrittstracking</li>
             <li>Erweiterbar um weitere Datenquellen (z.&nbsp;B. PubChem)</li>
-            <li><strong>Neu:</strong> Molekül-Baukasten zum Selberbauen!</li>
           </ul>
         </CardContent>
       </Card>

@@ -19,8 +19,8 @@
  *   onIncorrectAnswer={handleIncorrect}
  * />
  */
-import { useMemo, useState, useCallback, memo } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { useMemo, useState, useCallback, useEffect, memo } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import type { Molecule } from '@/lib/types'
@@ -37,6 +37,41 @@ import {
 } from '@/lib/chemistry-constants'
 
 type RenderMode = 'ballStick' | 'spaceFilling' | 'wireframe'
+
+// ─── Kamera-Fit: Molekül zentrieren und einpassen (auch auf schmalen Screens) ───
+function FitView({ molecule }: { molecule: Molecule }) {
+  const camera = useThree((s) => s.camera)
+  const size = useThree((s) => s.size)
+  const controls = useThree((s) => s.controls) as { target?: THREE.Vector3; update?: () => void } | null
+
+  useEffect(() => {
+    const center = new THREE.Vector3()
+    molecule.atoms.forEach((a) => center.add(new THREE.Vector3(...a.position)))
+    center.divideScalar(Math.max(1, molecule.atoms.length))
+
+    let radius = 1
+    molecule.atoms.forEach((a) => {
+      const d = new THREE.Vector3(...a.position).distanceTo(center)
+      if (d > radius) radius = d
+    })
+    radius += 1.2 // Puffer für Atomradien
+
+    const persp = camera as THREE.PerspectiveCamera
+    const vTan = Math.tan(((persp.fov ?? 50) * Math.PI) / 360)
+    const aspect = size.width / Math.max(1, size.height)
+    // Horizontaler Sichtkegel ist bei aspect < 1 der begrenzende Faktor
+    const dist = (radius / vTan) * (aspect < 1 ? 1 / aspect : 1) * 1.15
+
+    camera.position.set(center.x, center.y, center.z + dist)
+    camera.lookAt(center)
+    if (controls?.target) {
+      controls.target.copy(center)
+      controls.update?.()
+    }
+  }, [molecule, camera, size.width, size.height, controls])
+
+  return null
+}
 
 // ─── Atom Mesh ─────────────────────────────────────────────────────────
 interface AtomMeshProps {
@@ -322,6 +357,7 @@ function UnifiedMoleculeViewerInner({
         className={`w-full overflow-hidden rounded-xl border transition-colors ${bgClass}`}
       >
         <Canvas camera={{ position: [0, 0, 6], fov: 50 }} dpr={[1, 2]}>
+          <FitView molecule={molecule} />
           <ambientLight intensity={0.7} />
           <directionalLight position={[5, 5, 5]} intensity={0.8} />
           <directionalLight position={[-5, -3, -5]} intensity={0.3} />
@@ -376,7 +412,7 @@ function UnifiedMoleculeViewerInner({
             />
           ))}
 
-          <OrbitControls
+          <OrbitControls makeDefault
             enablePan={false}
             minDistance={3}
             maxDistance={20}

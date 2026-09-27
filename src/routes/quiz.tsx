@@ -1,14 +1,16 @@
 import { Suspense, lazy, useMemo, useState } from 'react';
-import { HelpCircle, Trash2 } from 'lucide-react';
+import { FlaskConical, HelpCircle, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useChemistryStore } from '@/store/useChemistryStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/PageHeader';
+import OrganicQuiz from '@/components/OrganicQuiz';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const UnifiedMoleculeViewer = lazy(() => import('@/components/UnifiedMoleculeViewer'));
 
-export default function Quiz() {
+function AtomCountQuiz() {
   const [molecule, setMolecule] = useState(() => api.getRandomMolecule());
   const [selected, setSelected] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -56,13 +58,7 @@ export default function Quiz() {
   const accuracy = progress.length > 0 ? Math.round((score / progress.length) * 100) : 0;
 
   return (
-    <>
-      <PageHeader
-        title="Quiz: Atome zählen"
-        description="Dreh das 3D-Modell, zähle die Atome eines Elements und prüfe dein Wissen. Dein Fortschritt wird mitverfolgt."
-        icon={<HelpCircle className="h-5 w-5" />}
-      />
-      <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid gap-6 md:grid-cols-2">
       <Card>
         <CardHeader>
           <CardTitle>Quiz: {molecule.name}</CardTitle>
@@ -136,6 +132,35 @@ export default function Quiz() {
         </CardContent>
       </Card>
       </div>
+  );
+}
+
+export default function Quiz() {
+  return (
+    <>
+      <PageHeader
+        title="Quiz"
+        description="Zähle Atome im 3D-Modell oder bestimme die Produkte organischer Reaktionen – dein Fortschritt wird mitverfolgt."
+        icon={<HelpCircle className="h-5 w-5" />}
+      />
+      <Tabs defaultValue="organic" className="w-full">
+        <TabsList className="grid h-auto w-full grid-cols-2">
+          <TabsTrigger value="organic" className="flex items-center gap-2">
+            <FlaskConical className="h-4 w-4" aria-hidden="true" />
+            Reaktions-Quiz
+          </TabsTrigger>
+          <TabsTrigger value="atoms" className="flex items-center gap-2">
+            <HelpCircle className="h-4 w-4" aria-hidden="true" />
+            Atome zählen (3D)
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="organic">
+          <OrganicQuiz />
+        </TabsContent>
+        <TabsContent value="atoms">
+          <AtomCountQuiz />
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

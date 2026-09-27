@@ -66,17 +66,17 @@ export default function Layout() {
       </a>
 
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-        <div className="container flex h-16 items-center justify-between gap-4">
+        <div className="container flex h-16 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-8">
           <NavLink to="/" className="flex items-center gap-2 font-bold" aria-label="Chemie-Labor Startseite">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm">
               <FlaskConical className="h-5 w-5" aria-hidden="true" />
             </span>
-            <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-lg text-transparent">
+            <span className="hidden bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-lg text-transparent sm:inline">
               Chemie-Labor
             </span>
           </NavLink>
 
-          <nav className="flex items-center gap-1" aria-label="Hauptnavigation">
+          <nav className="scroll-x-thin flex items-center gap-0.5 overflow-x-auto sm:gap-1" aria-label="Hauptnavigation">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
@@ -84,7 +84,7 @@ export default function Layout() {
                 end={item.to === '/'}
                 className={({ isActive }: { isActive: boolean }) =>
                   cn(
-                    'flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+                    'flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium transition-all sm:px-3',
                     isActive
                       ? 'bg-primary text-primary-foreground shadow-sm'
                       : 'text-foreground/80 hover:bg-accent hover:text-foreground'

@@ -139,11 +139,11 @@ export default function AtomBuilderCanvas({
       height={height}
       viewBox={`-${width / 2} ${-height / 2} ${width} ${height}`}
       onPointerDown={handlePointerDown}
-      style={{ cursor: 'default' }}
+      style={{ cursor: 'default', maxWidth: '100%', height: 'auto', touchAction: 'none' }}
       aria-label={`Atom-Builder: ${protonCount} Protonen, ${neutronCount} Neutronen, ${electronCount} Elektronen`}
     >
-      {/* Nucleus - protons and neutrons */}
-      <g className="nucleus" transform={`translate(${nucleusX}, ${nucleusY})`}>
+      {/* Nucleus - protons and neutrons (viewBox ist zentriert, also 0/0) */}
+      <g className="nucleus">
         {/* Protons - red circles in nucleus */}
         {protonParticles.map((p) => (
           <circle
@@ -245,8 +245,8 @@ export default function AtomBuilderCanvas({
 
       {/* Click instructions */}
       <text
-        x={width / 2}
-        y={height / 2 + (height / 2) * 0.65}
+        x={0}
+        y={height / 2 - 20}
         textAnchor="middle"
         fontSize={14}
         fill="currentColor"

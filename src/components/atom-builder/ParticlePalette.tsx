@@ -57,10 +57,8 @@ export default function ParticlePalette({
   };
 
   return (
-    <div
-      className="space-y-2 pt-2 border-t border-border/60 bg-background/80 sticky top-0 z-10 max-w-sm"
-      style={{ top: 80 }}
-    >
+    <div className="space-y-2 rounded-xl border border-border bg-card/70 p-4 shadow-sm backdrop-blur">
+      <h3 className="text-sm font-medium">Teilchen wählen</h3>
       {/* Selection indicator */}
       <div
         className="flex items-center gap-2 text-xs text-muted-foreground border-b border-border/60 pb-2 mb-3"
@@ -73,10 +71,9 @@ export default function ParticlePalette({
       {/* Proton button */}
       <Button
         variant="outline"
-        size="icon"
         onClick={() => onSelect('proton')}
         className={cn(
-          'group flex flex-col items-center rounded-md py-2 px-3 border transition-colors',
+          'group flex h-auto w-full items-center justify-start gap-2 rounded-md px-3 py-2 border transition-colors',
           'border-transparent hover:border-primary/30 hover:bg-primary/5',
           selectedParticleType === 'proton' && 'border-primary/30 bg-primary/5 text-primary',
           !canAdd.proton && 'opacity-50 cursor-not-allowed'
@@ -99,10 +96,9 @@ export default function ParticlePalette({
       {/* Neutron button */}
       <Button
         variant="outline"
-        size="icon"
         onClick={() => onSelect('neutron')}
         className={cn(
-          'group flex flex-col items-center rounded-md py-2 px-3 border transition-colors',
+          'group flex h-auto w-full items-center justify-start gap-2 rounded-md px-3 py-2 border transition-colors',
           'border-transparent hover:border-accent/30 hover:bg-accent/5',
           selectedParticleType === 'neutron' &&
             'border-accent/30 bg-accent/5 text-accent',
@@ -126,10 +122,9 @@ export default function ParticlePalette({
       {/* Electron button */}
       <Button
         variant="outline"
-        size="icon"
         onClick={() => onSelect('electron')}
         className={cn(
-          'group flex flex-col items-center rounded-md py-2 px-3 border transition-colors',
+          'group flex h-auto w-full items-center justify-start gap-2 rounded-md px-3 py-2 border transition-colors',
           'border-transparent hover:border-success/30 hover:bg-success/5',
           selectedParticleType === 'electron' &&
             'border-success/30 bg-success/5 text-success',
