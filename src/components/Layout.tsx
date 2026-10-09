@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useChemistryStore } from '@/store/useChemistryStore';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, FlaskConical, Home, Atom, Boxes, HelpCircle, Calculator, Menu, X, BookOpen } from 'lucide-react';
+import { Moon, Sun, FlaskConical, Home, Atom, Boxes, HelpCircle, Calculator, Menu, X, BookOpen, Beaker } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV = [
   { to: '/', label: 'Start', icon: Home },
   { to: '/periodic-table', label: 'Periodensystem', icon: Atom },
   { to: '/molecules', label: 'Moleküle', icon: Boxes },
+  { to: '/molecule-builder', label: 'Baukasten', icon: Beaker },
+  { to: '/atom-builder', label: 'Atombaukasten', icon: Atom },
   { to: '/calculator', label: 'Rechner', icon: Calculator },
   { to: '/lessons/methane-combustion', label: 'Lernen', icon: BookOpen },
   { to: '/quiz', label: 'Üben', icon: HelpCircle }

@@ -3,8 +3,7 @@
   "theme": "dark",
   "env": {
     "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
-    "ANTHROPIC_MODEL": "openrouter/free",
-    "ANTHROPIC_AUTH_TOKEN": "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"
+    "ANTHROPIC_MODEL": "openrouter/free"
   },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,

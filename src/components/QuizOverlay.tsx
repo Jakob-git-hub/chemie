@@ -111,7 +111,7 @@ export function QuizOverlay() {
                   variant={difficulty === d ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setDifficulty(d)}
-                  className="flex-1"
+                  className="flex-1 px-1 text-xs sm:px-3 sm:text-sm"
                 >
                   {d === 'beginner' && 'Anfänger'}
                   {d === 'advanced' && 'Fortgeschritten'}
@@ -130,7 +130,7 @@ export function QuizOverlay() {
           <div className="grid gap-3">
             <Button
               onClick={() => handleStartQuiz('identification')}
-              className="h-auto justify-start py-4 text-left"
+              className="h-auto justify-start whitespace-normal py-4 text-left"
               variant="default"
             >
               <div className="flex w-full items-center justify-between">
@@ -146,7 +146,7 @@ export function QuizOverlay() {
 
             <Button
               onClick={() => handleStartQuiz('functional_groups')}
-              className="h-auto justify-start py-4 text-left"
+              className="h-auto justify-start whitespace-normal py-4 text-left"
               variant="secondary"
             >
               <div className="flex w-full items-center justify-between">
@@ -294,10 +294,14 @@ export function QuizOverlay() {
 
         {/* Feedback / Erklärung */}
         {isAnswered && (
-          <div className={cn(
-            "rounded-lg p-3 text-sm",
-            isCorrect ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"
-          )}>
+          <div
+            className={cn(
+              "rounded-lg p-3 text-sm",
+              isCorrect ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"
+            )}
+            role="status"
+            aria-live="polite"
+          >
             <p className={cn(
               "font-medium",
               isCorrect ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"
