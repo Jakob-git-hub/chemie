@@ -65,7 +65,10 @@ function MoleculeQuizViewerInner({
 
     if (currentQuestion?.functionalGroupTarget) {
       const group = FUNCTIONAL_GROUPS[currentQuestion.functionalGroupTarget as FunctionalGroupKey];
-      selectAnswer(group?.name || 'Unbekannte Gruppe');
+      selectAnswer(
+        isTargetAtom ? (group?.name || 'Unbekannte Gruppe') : 'Falsches Atom',
+        isTargetAtom
+      );
     }
 
     if (isTargetAtom) onCorrectAnswer?.();
@@ -189,4 +192,3 @@ function MoleculeQuizViewerInner({
 }
 
 export default memo(MoleculeQuizViewerInner);
-

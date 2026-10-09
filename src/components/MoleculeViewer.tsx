@@ -279,6 +279,8 @@ function MoleculeViewerInner({
       <div
         style={{ height: `clamp(280px, 62vw, ${height}px)` }}
         className="w-full overflow-hidden rounded-xl border bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800"
+        role="img"
+        aria-label={`${molecule.name} als 3D-Molekülmodell. ${molecule.atoms.length} Atome und ${molecule.bonds.length} Bindungen.`}
       >
         <Canvas camera={{ position: [0, 0, 6], fov: 50 }} dpr={[1, 2]}>
           <ambientLight intensity={0.7} />
@@ -340,6 +342,38 @@ function MoleculeViewerInner({
 
           <OrbitControls enablePan={false} minDistance={3} maxDistance={20} />
         </Canvas>
+      </div>
+      <div className="mt-3 rounded-xl border bg-muted/30 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Atome auswählen
+          </p>
+          {bondDistance && (
+            <p className="text-xs text-primary" role="status" aria-live="polite">
+              Abstand: {bondDistance.distance.toFixed(2)} Å
+            </p>
+          )}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2" role="list" aria-label="Atome im Molekül">
+          {molecule.atoms.map((atom, index) => (
+            <button
+              key={`atom-button-${atom.id}`}
+              type="button"
+              onClick={() => handleAtomClick(atom.id)}
+              aria-pressed={selectedAtomId === atom.id}
+              className={`min-h-9 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+                selectedAtomId === atom.id
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-background hover:border-primary/50 hover:bg-primary/5'
+              }`}
+            >
+              {atom.element} <span className="text-muted-foreground">#{index + 1}</span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Für einen Abstand: zwei verschiedene Atome nacheinander auswählen.
+        </p>
       </div>
     </div>
   );

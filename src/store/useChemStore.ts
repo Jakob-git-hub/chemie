@@ -8,6 +8,8 @@ import {
   type ThermoData
 } from '@/lib/api';
 
+let moleculeRequestId = 0;
+
 interface Override {
   dHf?: number;
   S?: number;
@@ -163,19 +165,40 @@ export const useChemStore = create<ChemState>((set, get) => ({
   // 3D-Struktur laden UND Thermo synchron mitabfragen (KPI #1)
   loadMolecule: async (qRaw) => {
     const q = qRaw.trim();
+    const requestId = ++moleculeRequestId;
+    if (!q) {
+      set({ searchStatus: 'Bitte einen Namen, eine Formel oder SMILES eingeben.' });
+      return;
+    }
     set({ searchStatus: 'Suche in PubChem …' });
-    const info = await resolveCompound(q);
+    let info;
+    try {
+      info = await resolveCompound(q);
+    } catch {
+      if (requestId === moleculeRequestId) {
+        set({ searchStatus: 'Die externe Struktursuche ist gerade nicht erreichbar.' });
+      }
+      return;
+    }
+    if (requestId !== moleculeRequestId) return;
     if (!info) {
       set({ searchStatus: `„${q}“ nicht in PubChem gefunden.`, sdf: null, isomer: null });
       return;
     }
     set({
       sdf: info.sdf,
-      isomer: { name: info.name, formula: q, cid: info.cid, smiles: info.smiles },
+      isomer: { name: info.name, formula: info.formula, cid: info.cid, smiles: info.smiles },
       searchStatus: `Hauptisomer geladen: ${info.name} (CID ${info.cid})`
     });
-    const thermo = await fetchThermo(info.cid, info.formula);
-    set((s) => ({ thermoCache: { ...s.thermoCache, [info.formula]: thermo } }));
+    try {
+      const thermo = await fetchThermo(info.cid, info.formula);
+      if (requestId !== moleculeRequestId) return;
+      set((s) => ({ thermoCache: { ...s.thermoCache, [info.formula]: thermo } }));
+    } catch {
+      if (requestId === moleculeRequestId) {
+        set({ searchStatus: `Hauptisomer geladen: ${info.name} (Thermodaten nicht verfügbar)` });
+      }
+    }
     if (get().equation) get().analyze(get().equation); // Gibbs reaktiv neu verrechnen
   },
 

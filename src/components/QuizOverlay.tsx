@@ -236,7 +236,18 @@ export function QuizOverlay() {
           </h3>
           {gameMode === 'functional_groups' && currentQuestion.functionalGroupTarget && (
             <p className="mt-1 text-sm text-muted-foreground">
-              Gesucht: <span className="font-medium text-primary">{currentQuestion.functionalGroupTarget.replace('_', ' ')}</span>
+              Gesucht: <span className="font-medium text-primary">
+                {{
+                  hydroxyl: 'Hydroxylgruppe',
+                  carbonyl: 'Carbonylgruppe',
+                  carboxyl: 'Carboxylgruppe',
+                  ester: 'Estergruppe',
+                  amino: 'Aminogruppe',
+                  ether: 'Ethergruppe',
+                  aldehyde: 'Aldehydgruppe',
+                  ketone: 'Ketongruppe'
+                }[currentQuestion.functionalGroupTarget] ?? currentQuestion.functionalGroupTarget}
+              </span>
             </p>
           )}
         </div>

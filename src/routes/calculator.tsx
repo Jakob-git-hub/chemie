@@ -113,7 +113,7 @@ function GasLawCalculator() {
     const moles = parseFloat(n);
     const temp = parseFloat(T);
     const r = parseFloat(R);
-    if (![p, v, moles, temp, r].every(Number.isFinite) || temp <= 0) return null;
+    if (![p, v, moles, temp, r].every(Number.isFinite) || p <= 0 || v <= 0 || moles <= 0 || temp <= 0 || r <= 0) return null;
 
     const pV = p * v;           // kPa·L = J
     const nRT = moles * r * temp; // J
@@ -260,7 +260,7 @@ function ConcentrationCalculator() {
       const vol = parseFloat(v);
       const mm = parseFloat(m);
       const g = parseFloat(mass);
-      if (![conc, vol, mm, g].every(Number.isFinite)) return null;
+      if (![conc, vol, mm, g].every(Number.isFinite) || conc <= 0 || vol <= 0 || mm <= 0 || g < 0) return null;
       const n = g / mm;
       const calcC = n / vol;
       const calcV = n / conc;
@@ -271,10 +271,11 @@ function ConcentrationCalculator() {
       const conc2 = parseFloat(c2);
       const vol2 = parseFloat(v2);
       if (![conc1, vol1, conc2, vol2].every(Number.isFinite)) return null;
-      if (conc1 <= 0 || conc2 <= 0) return null;
+      if (conc1 <= 0 || conc2 <= 0 || vol1 <= 0 || vol2 <= 0) return null;
       // c1*V1 = c2*V2 → V1 = c2*V2/c1
       const calcV1 = (conc2 * vol2) / conc1;
       const water = vol2 - calcV1;
+      if (calcV1 > vol2) return null;
       return { conc1, vol1, conc2, vol2, calcV1, water };
     }
   }, [mode, c, v, m, mass, c1, v1, c2, v2]);
@@ -361,7 +362,7 @@ function ConcentrationCalculator() {
           <div className="space-y-2" role="region" aria-label="Verdünnungsergebnisse">
             <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 text-center font-mono">
               c₁·V₁ = c₂·V₂<br />
-              {parseFloat(c1).toFixed(2)} × {parseFloat(v1).toFixed(3)} = {parseFloat(c2).toFixed(2)} × {parseFloat(v2).toFixed(3)}
+              {parseFloat(c1).toFixed(2)} × {result.calcV1.toFixed(3)} = {parseFloat(c2).toFixed(2)} × {parseFloat(v2).toFixed(3)}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <InfoCard
@@ -405,19 +406,19 @@ function PHCalculator() {
     const ck = parseFloat(kaConc);
 
     if (mode === 'ph') {
-      if (!Number.isFinite(p)) return null;
+      if (!Number.isFinite(p) || p < 0 || p > 14) return null;
       const h3o = Math.pow(10, -p);
       const oh = 1e-14 / h3o;
       const pOH = -Math.log10(oh);
       return { ph: p, pOH, h3o, oh, strong: true };
     } else if (mode === 'pOH') {
-      if (!Number.isFinite(p)) return null;
+      if (!Number.isFinite(p) || p < 0 || p > 14) return null;
       const oh = Math.pow(10, -p);
       const h3o = 1e-14 / oh;
       const pH = -Math.log10(h3o);
       return { ph: pH, pOH: p, h3o, oh, strong: true };
     } else {
-      if (!Number.isFinite(k) || !Number.isFinite(ck) || ck <= 0) return null;
+      if (!Number.isFinite(k) || !Number.isFinite(ck) || k <= 0 || ck <= 0) return null;
       const h3o = Math.sqrt(k * ck);
       const pH = -Math.log10(h3o);
       const oh = 1e-14 / h3o;

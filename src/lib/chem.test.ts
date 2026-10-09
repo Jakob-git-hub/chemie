@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseFormula, balanceEquation, calculateDeltaHFromBonds, suggestProducts } from '@/lib/chem';
 import type { Molecule } from '@/lib/types';
+import { METHANE_COMBUSTION_LESSON } from '@/data/lessons';
 
 describe('parseFormula', () => {
   it('berechnet Wasser korrekt', () => {
@@ -41,6 +42,12 @@ describe('parseFormula', () => {
     const r = parseFormula('H₂O');
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.counts).toEqual({ H: 2, O: 1 });
+  });
+
+  it('lehnt kaputte Klammern und leere Hydrate ab', () => {
+    expect(parseFormula(')H2O').ok).toBe(false);
+    expect(parseFormula('()').ok).toBe(false);
+    expect(parseFormula('CuSO4*').ok).toBe(false);
   });
 });
 
@@ -128,5 +135,28 @@ describe('suggestProducts', () => {
 
   it('gibt leeres Array für leere Liste zurück', () => {
     expect(suggestProducts([])).toEqual([]);
+  });
+});
+
+describe('guided reaction lesson content', () => {
+  it('uses a parseable methane-combustion equation', () => {
+    const reaction = METHANE_COMBUSTION_LESSON.reaction;
+    for (const species of [...reaction.reactants, ...reaction.products]) {
+      expect(parseFormula(species.formula).ok).toBe(true);
+    }
+  });
+
+  it('balances the curated methane-combustion equation deterministically', () => {
+    const reaction = METHANE_COMBUSTION_LESSON.reaction;
+    const result = balanceEquation(reaction.equation);
+
+    expect(result).toEqual({
+      ok: true,
+      reactants: ['CH4', 'O2'],
+      products: ['CO2', 'H2O'],
+      coeffs: [1, 2, 1, 2],
+      balanced: reaction.balancedEquation
+    });
+    expect(result.ok && result.coeffs).toEqual(reaction.expectedCoefficients);
   });
 });

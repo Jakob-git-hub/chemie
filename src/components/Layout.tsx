@@ -2,22 +2,21 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useChemistryStore } from '@/store/useChemistryStore';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, FlaskConical, Home, Atom, Boxes, HelpCircle, Calculator, Menu, X, Command } from 'lucide-react';
+import { Moon, Sun, FlaskConical, Home, Atom, Boxes, HelpCircle, Calculator, Menu, X, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SettingsPanel, SettingsButton } from '@/components/SettingsPanel';
 
 const NAV = [
   { to: '/', label: 'Start', icon: Home },
   { to: '/periodic-table', label: 'Periodensystem', icon: Atom },
   { to: '/molecules', label: 'Moleküle', icon: Boxes },
   { to: '/calculator', label: 'Rechner', icon: Calculator },
-  { to: '/quiz', label: 'Quiz', icon: HelpCircle }
+  { to: '/lessons/methane-combustion', label: 'Lernen', icon: BookOpen },
+  { to: '/quiz', label: 'Üben', icon: HelpCircle }
 ];
 
 export default function Layout() {
   const theme = useChemistryStore((s) => s.theme);
   const toggleTheme = useChemistryStore((s) => s.toggleTheme);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const location = useLocation();
 
@@ -101,16 +100,6 @@ export default function Layout() {
                 )}
               </NavLink>
             ))}
-            <div className="hidden items-center gap-1 rounded-lg border border-border bg-muted/40 px-2 py-1.5 text-[11px] text-muted-foreground lg:flex">
-              <Command className="h-3 w-3" />
-              <span>Lokales Labor</span>
-            </div>
-            <SettingsButton
-              onClick={() => {
-                setMobileNavOpen(false);
-                setSettingsOpen(true);
-              }}
-            />
             <Button
               variant="ghost"
               size="icon"
@@ -171,13 +160,10 @@ export default function Layout() {
                   {item.label}
                 </NavLink>
               ))}
-              <SettingsButton onClick={() => setSettingsOpen(true)} />
             </div>
           </nav>
         )}
       </header>
-
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       <main id="main-content" className="container relative z-10 flex-1 py-8 sm:py-10" tabIndex={-1}>
         <Outlet />

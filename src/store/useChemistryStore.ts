@@ -1,15 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Molecule, QuizResult } from '@/lib/types';
 
 interface ChemistryState {
-  currentMolecule: Molecule | null;
-  setMolecule: (m: Molecule | null) => void;
-
-  quizProgress: QuizResult[];
-  addResult: (r: QuizResult) => void;
-  resetProgress: () => void;
-
   theme: 'light' | 'dark';
   toggleTheme: () => void;
 
@@ -26,13 +18,6 @@ interface ChemistryState {
 export const useChemistryStore = create<ChemistryState>()(
   persist(
     (set, get) => ({
-      currentMolecule: null,
-      setMolecule: (m) => set({ currentMolecule: m }),
-
-      quizProgress: [],
-      addResult: (r) => set((s) => ({ quizProgress: [...s.quizProgress, r] })),
-      resetProgress: () => set({ quizProgress: [] }),
-
       theme: 'light',
       toggleTheme: () => set((s) => ({ theme: s.theme === 'light' ? 'dark' : 'light' })),
 
@@ -64,9 +49,8 @@ export const useChemistryStore = create<ChemistryState>()(
     }),
     {
       name: 'chemistry-store',
-      // Only persist quiz progress, theme, favorites, and history
+      // Only persist user preferences and local saved work.
       partialize: (state) => ({
-        quizProgress: state.quizProgress,
         theme: state.theme,
         favorites: state.favorites,
         searchHistory: state.searchHistory

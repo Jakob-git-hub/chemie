@@ -44,10 +44,14 @@ function normalize(input: string): { ok: true; main: string; hydrate?: { formula
   const parts = s.split('*');
   if (parts.length > 2) return { ok: false, error: 'Ungültige Formel: zu viele Hydrat-Komponenten.' };
   const main = parts[0].trim();
+  if (!main) return { ok: false, error: 'Ungültige Formel: Hauptkomponente fehlt.' };
   if (parts.length === 2) {
     const m = parts[1].trim().match(/^(\d*)(.*)$/);
     const mult = m && m[1] ? parseInt(m[1], 10) : 1;
     const formula = m ? m[2] : '';
+    if (!formula || !mult || mult <= 0) {
+      return { ok: false, error: 'Ungültige Hydrat-Komponente.' };
+    }
     return { ok: true, main, hydrate: { formula, mult } };
   }
   return { ok: true, main };
@@ -62,6 +66,7 @@ function parseComponent(comp: string): FormulaResult {
       stack.push({});
       i++;
     } else if (ch === ')') {
+      if (stack.length === 1) return { ok: false, error: 'Unerwartete schließende Klammer.' };
       i++;
       let num = '';
       while (i < comp.length && /\d/.test(comp[i])) {
@@ -72,6 +77,7 @@ function parseComponent(comp: string): FormulaResult {
       const group = stack.pop();
       if (!group) return { ok: false, error: 'Klammern nicht geschlossen.' };
       const parent = stack[stack.length - 1];
+      if (!Object.keys(group).length) return { ok: false, error: 'Leere Klammergruppe ist nicht erlaubt.' };
       for (const sym in group) parent[sym] = (parent[sym] || 0) + group[sym] * mult;
     } else if (/[A-Z]/.test(ch)) {
       let sym = ch;
@@ -97,6 +103,7 @@ function parseComponent(comp: string): FormulaResult {
   }
   if (stack.length !== 1) return { ok: false, error: 'Klammern nicht geschlossen.' };
   const counts = stack[0];
+  if (!Object.keys(counts).length) return { ok: false, error: 'Formel enthält kein Element.' };
   let mass = 0;
   for (const sym in counts) mass += ATOMIC_MASS[sym] * counts[sym];
   const total = mass;

@@ -7,17 +7,14 @@ import { Label } from '@/components/ui/label';
 import { InfoCard, StatRow } from '@/components/ui/info-card';
 import { useChemStore } from '@/store/useChemStore';
 import { useChemistryStore } from '@/store/useChemistryStore';
-import { useQuizStore } from '@/store/useQuizStore';
 import { checkAtomBalance } from '@/lib/api';
 import { parseSDF } from '@/lib/sdf';
 import { EquationBalancer } from '@/components/BalanceSteps';
 import { FavoritesAndHistory, FavoriteButton } from '@/components/FavoritesAndHistory';
-import { QuizOverlay, QuizStartButton } from '@/components/QuizOverlay';
 import PageHeader from '@/components/PageHeader';
 
 // 3D-Modul (React-Three-Fiber) wird erst bei Bedarf geladen.
 const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
-const MoleculeQuizViewer = lazy(() => import('@/components/MoleculeQuizViewer'));
 
 // --- MathJax-Bootstrap (einmalig) für den Formelsatz ---
 function useMathJax() {
@@ -72,7 +69,6 @@ export default function Molecules() {
   } = useChemStore();
 
   const { addToHistory } = useChemistryStore();
-  const { gameMode, currentQuestion } = useQuizStore();
 
   // PubChem-SDF (3D) -> Molecule für den React-Three-Fiber-Viewer.
   // Völlig ohne externes JSmol/CDN – daher im Browser zuverlässig.
@@ -111,19 +107,15 @@ export default function Molecules() {
     <>
       <PageHeader
         title="Moleküle & Reaktionen"
-        description="Lade 3D-Strukturen aus PubChem, gleiche Reaktionsgleichungen aus und simuliere Thermodynamik – alles lokal im Browser."
+        description="Erkunde Molekülstrukturen und Reaktionen. Die lokale Oberfläche bleibt offline nutzbar; externe PubChem-Daten werden nur bei einer Suche geladen."
         icon={<Boxes className="h-5 w-5" />}
       />
       <div className="space-y-6">
-      {/* ---------- Quiz Overlay (wird angezeigt wenn Quiz aktiv) ---------- */}
-      <QuizOverlay />
-
       {/* ---------- 1. Universelle 3D-Struktur-Suche ---------- */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Universelle 3D-Struktur-Suche</CardTitle>
-            <QuizStartButton />
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -180,14 +172,7 @@ export default function Molecules() {
           {molecule ? (
             <>
               <Suspense fallback={<div className="aspect-[4/3] max-h-[440px] animate-pulse rounded-xl bg-muted sm:aspect-auto sm:h-[440px]" />}>
-                {gameMode !== 'idle' && currentQuestion ? (
-                  <MoleculeQuizViewer
-                    molecule={currentQuestion.molecule}
-                    height={440}
-                  />
-                ) : (
-                  <MoleculeViewer molecule={molecule} height={440} onSelectAtom={setSelectedAtomId} />
-                )}
+                <MoleculeViewer molecule={molecule} height={440} onSelectAtom={setSelectedAtomId} />
               </Suspense>
               {selectedAtom ? (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
@@ -302,8 +287,9 @@ export default function Molecules() {
           </div>
 
           <div>
-            <Label className="mb-1 block">Temperatur T: {temperature} K</Label>
+            <Label htmlFor="thermo-temperature" className="mb-1 block">Temperatur T: {temperature} K</Label>
             <input
+              id="thermo-temperature"
               type="range"
               min={200}
               max={1000}
@@ -321,9 +307,14 @@ export default function Molecules() {
             </div>
             {spontaneous !== null && (
               <div className={`mt-1 text-sm font-medium ${spontaneous ? 'text-green-600' : 'text-red-600'}`}>
-                {spontaneous ? 'spontan (ΔG < 0)' : 'nicht spontan (ΔG > 0)'}
+                {spontaneous
+                  ? 'unter diesen Annahmen thermodynamisch begünstigt (ΔG < 0)'
+                  : 'unter diesen Annahmen nicht thermodynamisch begünstigt (ΔG > 0)'}
               </div>
             )}
+            <p className="mt-2 text-xs text-muted-foreground">
+              ΔG beschreibt die thermodynamische Triebkraft unter den gewählten Annahmen – nicht die Reaktionsgeschwindigkeit oder Sicherheit.
+            </p>
           </div>
 
           {/* Manuelle Korrektur, falls API/DB keine Thermodaten liefert (kein NaN) */}

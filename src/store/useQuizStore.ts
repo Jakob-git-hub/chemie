@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Molecule } from '@/lib/types';
 import { MOLECULES, getMoleculesByDifficulty, getMoleculesWithFunctionalGroups, FUNCTIONAL_GROUPS, type FunctionalGroupKey } from '@/data/molecules';
-import { generateQuizOptions, getRandomDistractors, getFunctionalGroupForMolecule } from '@/utils/quizGenerator';
+import { generateQuizOptions } from '@/utils/quizGenerator';
 
 export type GameMode = 'idle' | 'identification' | 'functional_groups';
 export type Difficulty = 'beginner' | 'advanced' | 'expert';
@@ -42,7 +42,7 @@ interface QuizState {
 
   // Aktionen
   startQuiz: (mode: GameMode, difficulty: Difficulty) => void;
-  selectAnswer: (answer: string) => void;
+  selectAnswer: (answer: string, correctOverride?: boolean) => void;
   nextQuestion: () => void;
   requestHint: () => void;
   endQuiz: () => void;
@@ -102,14 +102,14 @@ function generateQuestionPool(mode: GameMode, difficulty: Difficulty): QuizQuest
   return shuffleArray(questions);
 }
 
-function getNextQuestion(state: QuizState): QuizQuestion | null {
+function getNextQuestion(state: QuizState): { question: QuizQuestion | null; pool: QuizQuestion[] } {
   const { questionPool, usedMoleculeIds, gameMode } = state;
 
   // Finde eine nicht verwendete Frage
   for (let i = 0; i < questionPool.length; i++) {
     const question = questionPool[i];
     if (!usedMoleculeIds.has(question.molecule.id)) {
-      return question;
+      return { question, pool: questionPool };
     }
   }
 
@@ -117,10 +117,10 @@ function getNextQuestion(state: QuizState): QuizQuestion | null {
   if (questionPool.length > 0) {
     // Starte neue Runde mit neuen Fragen
     const newPool = generateQuestionPool(gameMode as GameMode, state.difficulty);
-    return newPool[0] || null;
+    return { question: newPool[0] || null, pool: newPool };
   }
 
-  return null;
+  return { question: null, pool: questionPool };
 }
 
 export const useQuizStore = create<QuizState>()(
@@ -172,11 +172,11 @@ export const useQuizStore = create<QuizState>()(
         }
       },
 
-      selectAnswer: (answer) => {
+      selectAnswer: (answer, correctOverride) => {
         const state = get();
         if (state.isAnswered || !state.currentQuestion) return;
 
-        const isCorrect = answer === state.currentQuestion.correctAnswer;
+        const isCorrect = correctOverride ?? answer === state.currentQuestion.correctAnswer;
 
         set({
           selectedAnswer: answer,
@@ -195,7 +195,7 @@ export const useQuizStore = create<QuizState>()(
 
       nextQuestion: () => {
         const state = get();
-        const nextQ = getNextQuestion(state);
+        const { question: nextQ, pool } = getNextQuestion(state);
 
         if (!nextQ) {
           // Keine weiteren Fragen verfügbar
@@ -212,11 +212,12 @@ export const useQuizStore = create<QuizState>()(
           options = generateQuizOptions(nextQ.molecule, 'functional_group', MOLECULES);
         }
 
-        const newUsed = new Set(state.usedMoleculeIds);
+        const newUsed = new Set<string>();
         newUsed.add(nextQ.molecule.id);
 
         set({
           currentQuestion: { ...nextQ, options },
+          questionPool: pool,
           selectedAnswer: null,
           isAnswered: false,
           isCorrect: null,

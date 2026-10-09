@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/PageHeader';
 import { useChemistryStore } from '@/store/useChemistryStore';
+import { useQuizStore } from '@/store/useQuizStore';
 
 const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
 
@@ -13,11 +14,12 @@ export default function Home() {
   const [idx, setIdx] = useState(0);
   const molecule = MOLECULES[idx];
   const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
-  const progress = useChemistryStore((s) => s.quizProgress);
   const favorites = useChemistryStore((s) => s.favorites);
-  const correctAnswers = progress.filter((result) => result.correct).length;
+  const totalQuestions = useQuizStore((s) => s.totalQuestions);
+  const correctAnswers = useQuizStore((s) => s.correctAnswers);
 
   useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const timer = setInterval(() => setIdx((current) => (current + 1) % MOLECULES.length), 6000);
     return () => clearInterval(timer);
   }, []);
@@ -84,9 +86,42 @@ export default function Home() {
         </section>
 
         <section className="grid gap-4 sm:grid-cols-3">
-          <MetricCard icon={<TrendingUp />} label="Quiz-Fortschritt" value={`${correctAnswers} richtig`} detail={progress.length ? `${progress.length} Antworten gesammelt` : 'Noch keine Session gestartet'} />
+          <MetricCard icon={<TrendingUp />} label="Übungsfortschritt" value={`${correctAnswers} richtig`} detail={totalQuestions ? `${totalQuestions} Antworten gesammelt` : 'Noch keine Session gestartet'} />
           <MetricCard icon={<FlaskConical />} label="Gemerkte Formeln" value={`${favorites.length}`} detail="Favoriten im lokalen Labor" />
-          <MetricCard icon={<Zap />} label="Nächster Schritt" value="5 Minuten" detail="Eine kurze Lernsession reicht" />
+          <MetricCard icon={<Zap />} label="Nächster Schritt" value="Üben" detail="Starte eine kurze Molekül-Session" />
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="flex flex-col justify-between gap-5 p-6 sm:flex-row sm:items-center">
+              <div>
+                <p className="eyebrow">Geführte Session</p>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight">Eine Reaktion Schritt für Schritt verstehen.</h2>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                  Starte mit der Verbrennung von Methan und lerne, warum Koeffizienten die Atombilanz ändern, aber Formeln unverändert bleiben.
+                </p>
+              </div>
+              <NavLink
+                to="/lessons/methane-combustion"
+                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-bold text-primary-foreground shadow-sm transition-transform hover:-translate-y-0.5"
+              >
+                Lektion starten <ArrowRight className="h-4 w-4" />
+              </NavLink>
+            </CardContent>
+          </Card>
+          <Card className="h-full">
+            <CardContent className="p-6">
+              <p className="eyebrow">Lernpfad</p>
+              <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                {['Atome', 'Moleküle', 'Formeln', 'Reaktionen'].map((topic, index) => (
+                  <span key={topic} className={`rounded-full border px-3 py-1.5 ${index === 3 ? 'border-primary bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground'}`}>
+                    {index + 1}. {topic}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">Diese erste Lektion verbindet Formeln, Stoffbilanz und Reaktionsdenken.</p>
+            </CardContent>
+          </Card>
         </section>
 
         <section className="grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
