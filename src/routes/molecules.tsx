@@ -93,6 +93,10 @@ export default function Molecules() {
     ? molecule?.atoms.find((a) => a.id === selectedAtomId) ?? null
     : null;
 
+  useEffect(() => {
+    setSelectedAtomId(null);
+  }, [molecule?.id, molecule?.formula]);
+
   const check = useMemo(() => (balance?.species ? checkAtomBalance(balance.species) : null), [balance]);
   const spontaneous = deltaG !== null ? deltaG < 0 : null;
 
@@ -131,8 +135,9 @@ export default function Molecules() {
             }}
             className="flex flex-col gap-2"
           >
-            <Label>Formel</Label>
+            <Label htmlFor="molecule-query">Formel</Label>
             <Input
+              id="molecule-query"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Name, SMILES oder Summenformel (z. B. Koffein, CCO, C6H12O6)"
@@ -174,7 +179,7 @@ export default function Molecules() {
           {/* 3D-Viewer (React-Three-Fiber) – keine externe CDN-Abhängigkeit */}
           {molecule ? (
             <>
-              <Suspense fallback={<div className="h-[440px] animate-pulse rounded-xl bg-muted" />}>
+              <Suspense fallback={<div className="aspect-[4/3] max-h-[440px] animate-pulse rounded-xl bg-muted sm:aspect-auto sm:h-[440px]" />}>
                 {gameMode !== 'idle' && currentQuestion ? (
                   <MoleculeQuizViewer
                     molecule={currentQuestion.molecule}
@@ -206,7 +211,7 @@ export default function Molecules() {
               )}
             </>
           ) : (
-            <div className="flex h-[440px] items-center justify-center rounded-xl border text-muted-foreground">
+            <div className="flex aspect-[4/3] max-h-[440px] items-center justify-center rounded-xl border text-center text-muted-foreground sm:aspect-auto sm:h-[440px]">
               Noch keine Struktur geladen – suche oben nach einem Molekül.
             </div>
           )}
@@ -226,8 +231,9 @@ export default function Molecules() {
             }}
             className="flex flex-col gap-2"
           >
-            <Label>Reaktionsgleichung (Beispiel: "Fe + O2 -&gt;" oder "CH4 + O2 -&gt; CO2 + H2O")</Label>
+            <Label htmlFor="reaction-equation">Reaktionsgleichung (Beispiel: "Fe + O2 -&gt;" oder "CH4 + O2 -&gt; CO2 + H2O")</Label>
             <Input
+              id="reaction-equation"
               value={equation}
               onChange={(e) => setEquation(e.target.value)}
               placeholder="Edukt + Edukt -> Produkt"

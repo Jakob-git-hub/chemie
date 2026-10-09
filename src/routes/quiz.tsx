@@ -10,7 +10,8 @@ const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
 
 export default function Quiz() {
   const [molecule, setMolecule] = useState(() => api.getRandomMolecule());
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const addResult = useChemistryStore((s) => s.addResult);
   const resetProgress = useChemistryStore((s) => s.resetProgress);
@@ -43,12 +44,13 @@ export default function Quiz() {
       expected: String(question.count),
       timestamp: Date.now()
     });
-    setSelected(String(value));
+    setSelectedAnswer(String(value));
   };
 
   const next = () => {
     setMolecule(api.getRandomMolecule());
-    setSelected(null);
+    setSelectedAtomId(null);
+    setSelectedAnswer(null);
     setFeedback(null);
   };
 
@@ -68,8 +70,8 @@ export default function Quiz() {
           <CardTitle>Quiz: {molecule.name}</CardTitle>
         </CardHeader>
         <CardContent>
-          <Suspense fallback={<div className="h-[420px] animate-pulse rounded-xl bg-muted" />}>
-            <MoleculeViewer molecule={molecule} onSelectAtom={setSelected} />
+          <Suspense fallback={<div className="aspect-[4/3] max-h-[420px] animate-pulse rounded-xl bg-muted sm:aspect-auto sm:h-[420px]" />}>
+            <MoleculeViewer molecule={molecule} onSelectAtom={setSelectedAtomId} />
           </Suspense>
         </CardContent>
       </Card>
@@ -83,10 +85,10 @@ export default function Quiz() {
             {question.options.map((opt) => (
               <Button
                 key={opt}
-                variant={selected === String(opt) ? 'default' : 'outline'}
+                variant={selectedAnswer === String(opt) ? 'default' : 'outline'}
                 onClick={() => check(opt)}
-                disabled={selected !== null}
-                aria-pressed={selected === String(opt)}
+                disabled={selectedAnswer !== null}
+                aria-pressed={selectedAnswer === String(opt)}
                 aria-label={`${opt} Atome`}
               >
                 {opt}
@@ -128,7 +130,7 @@ export default function Quiz() {
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </Button>
               )}
-              <Button onClick={next} disabled={selected === null}>
+              <Button onClick={next} disabled={selectedAnswer === null}>
                 Nächste Frage →
               </Button>
             </div>

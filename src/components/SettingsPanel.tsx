@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Settings, X, Thermometer, Zap, Gauge, Droplets } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,6 +59,7 @@ function UnitSelector<T extends string>({
 }
 
 export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
   const {
     temperature,
     energy,
@@ -69,6 +70,20 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     setPressure,
     setVolume,
   } = useSettingsStore();
+
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -82,10 +97,17 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
       />
 
       {/* Panel */}
-      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 p-4">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-title"
+        tabIndex={-1}
+        className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 p-0 outline-none"
+      >
         <Card className="shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg">
+            <CardTitle id="settings-title" className="flex items-center gap-2 text-lg">
               <Settings className="h-5 w-5" aria-hidden="true" />
               Einstellungen
             </CardTitle>

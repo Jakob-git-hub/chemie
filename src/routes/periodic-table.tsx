@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, Grid3x3 } from 'lucide-react';
+import { Search, Grid3x3, Atom } from 'lucide-react';
 import {
   CATEGORIES,
   ELEMENTS,
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import ElementTile from '@/components/ElementTile';
 import ElementDetail from '@/components/ElementDetail';
 import { cn } from '@/lib/utils';
+import PageHeader from '@/components/PageHeader';
 
 type Filter = ElementCategory | 'all';
 
@@ -44,7 +45,7 @@ export default function PeriodicTable() {
         el.name.toLowerCase().includes(q) ||
         el.nameEn.toLowerCase().includes(q) ||
         String(el.number) === q;
-      return { show: byCat, hit: byQuery };
+      return { show: byCat && byQuery, hit: byQuery };
     };
   }, [q, filter]);
 
@@ -65,7 +66,13 @@ export default function PeriodicTable() {
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      <PageHeader
+        title="Periodensystem"
+        description="Suche, filtere und öffne jedes Element in einer übersichtlichen, interaktiven Tabelle."
+        icon={<Atom className="h-5 w-5" />}
+      />
+      <div className="space-y-6">
       {/* Toolbar */}
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card/70 p-4 shadow-sm backdrop-blur">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -173,6 +180,7 @@ export default function PeriodicTable() {
             key={c.key}
             type="button"
             onClick={() => setFilter((f) => (f === c.key ? 'all' : c.key))}
+                  aria-pressed={filter === c.key}
             className={cn(
               'flex items-center gap-1.5 rounded-full px-2 py-0.5 transition-colors',
               filter === c.key && 'ring-2 ring-foreground'
@@ -188,7 +196,8 @@ export default function PeriodicTable() {
       </div>
 
       {selected && <ElementDetail element={selected} onClose={() => setSelected(null)} />}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -211,8 +220,8 @@ function FilterChip({
       onClick={onClick}
       style={style}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all',
-        'border border-transparent hover:scale-105',
+        'inline-flex min-h-8 items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+        'border border-transparent',
         !active && !style && 'bg-muted text-muted-foreground hover:bg-accent',
         active && 'ring-2 ring-offset-1 ring-foreground ring-offset-background',
         className

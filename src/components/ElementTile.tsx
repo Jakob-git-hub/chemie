@@ -26,8 +26,8 @@ export default function ElementTile({ element, onSelect, dimmed, highlighted }: 
       title={`${element.name} (${element.symbol})`}
       style={{ backgroundColor: meta.bg, color: meta.fg }}
       className={cn(
-        'group relative flex aspect-square w-full flex-col justify-between rounded-md p-1 text-left transition-all duration-150',
-        'hover:z-10 hover:scale-[1.12] hover:shadow-xl focus:z-10 focus:scale-[1.05] focus:outline-none focus:ring-2 focus:ring-offset-2',
+        'group relative flex aspect-square w-full flex-col justify-between rounded-md p-1 text-left transition-[box-shadow,filter] duration-150',
+        'hover:z-10 hover:brightness-105 hover:shadow-md focus:z-10 focus:outline-none focus:ring-2 focus:ring-offset-2',
         'ring-offset-background',
         dimmed ? 'opacity-25 saturate-50' : 'opacity-100',
         highlighted && !dimmed && 'ring-2 ring-foreground ring-offset-2 shadow-lg'

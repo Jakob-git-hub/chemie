@@ -10,9 +10,6 @@
   <title>Chemie-Labor • Interaktive Lernplattform</title>
   <!-- Preconnect to PubChem CDN for faster molecule loading -->
   <link rel="preconnect" href="https://pubchem.ncbi.nlm.nih.gov" />
-  <!-- Pre-fetch MathJax for formula rendering -->
-  <link rel="prefetch" href="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" as="script" />
-  <!-- Accessible theme toggle - moved to UI via SettingsPanel -->
 </head>
 <body>
   <div id="root"></div>
@@ -20,23 +17,25 @@
   <!-- Theme initialization - runs synchronously to avoid FOUD flash -->
   <script>
     (function() {
-      const THEME_KEY = 'preferred-theme';
+      const THEME_KEY = 'chemistry-store';
       const root = document.documentElement;
-      const saved = localStorage.getItem(THEME_KEY);
+      let saved = null;
+      try {
+        const state = JSON.parse(localStorage.getItem(THEME_KEY) || 'null');
+        saved = state?.state?.theme || null;
+      } catch (_) {
+        saved = null;
+      }
 
       // Apply saved theme immediately (before React loads)
       if (saved === 'dark') {
         root.classList.add('dark');
-      } else if (saved === 'claude') {
-        root.setAttribute('data-theme', 'claude');
       }
 
       // Respect system preference if no saved preference
       if (!saved) {
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const prefersClaude = window.matchMedia('(prefers-color-scheme: dark)').matches &&
-                              localStorage.getItem('claude-preference') === 'true';
-        if (prefersDark && !prefersClaude) {
+        if (prefersDark) {
           root.classList.add('dark');
         }
       }

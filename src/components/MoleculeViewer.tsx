@@ -54,13 +54,12 @@ interface BondMeshProps {
   bond: { from: string; to: string };
   atomMap: Record<string, [number, number, number]>;
   renderMode: RenderMode;
-  selectedAtomId: string | null;
   measuredFrom: string | null;
   measuredTo: string | null;
 }
 
 const BondMesh = memo(function BondMesh({
-  bond, atomMap, renderMode, selectedAtomId, measuredFrom, measuredTo,
+  bond, atomMap, renderMode, measuredFrom, measuredTo,
 }: BondMeshProps) {
   const a = atomMap[bond.from];
   const b = atomMap[bond.to];
@@ -72,9 +71,6 @@ const BondMesh = memo(function BondMesh({
   const isMeasured = measuredFrom !== null && measuredTo !== null &&
     ((bond.from === measuredFrom && bond.to === measuredTo) ||
      (bond.from === measuredTo && bond.to === measuredFrom));
-  const isWithSelected = selectedAtomId !== null &&
-    (bond.from === selectedAtomId || bond.to === selectedAtomId);
-
   const color = isMeasured ? CORRECT_COLOR : BOND_COLOR;
   const emissive = isMeasured ? CORRECT_COLOR : '#000000';
   const emissiveIntensity = isMeasured ? 0.5 : 0;
@@ -249,8 +245,9 @@ function MoleculeViewerInner({
         {(['ballStick', 'spaceFilling', 'wireframe'] as RenderMode[]).map((mode) => (
           <button
             key={mode}
+            type="button"
             onClick={() => setRenderMode(mode)}
-            className={`rounded px-2 py-1 text-xs font-medium transition-all ${
+            className={`rounded px-2 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               renderMode === mode
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted hover:bg-muted/80'
@@ -265,8 +262,9 @@ function MoleculeViewerInner({
       {/* Save image */}
       <div className="absolute top-3 right-3 z-10">
         <button
+          type="button"
           onClick={handleSaveImage}
-          className="rounded-lg bg-background/80 p-2 shadow-md backdrop-blur-sm hover:bg-background/90 transition-colors"
+          className="rounded-lg bg-background/80 p-2 shadow-md backdrop-blur-sm transition-colors hover:bg-background/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           title="Bild speichern"
           aria-label="Molekülbild als PNG speichern"
         >
@@ -279,7 +277,7 @@ function MoleculeViewerInner({
       </div>
 
       <div
-        style={{ height }}
+        style={{ height: `clamp(280px, 62vw, ${height}px)` }}
         className="w-full overflow-hidden rounded-xl border bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800"
       >
         <Canvas camera={{ position: [0, 0, 6], fov: 50 }} dpr={[1, 2]}>
@@ -325,7 +323,6 @@ function MoleculeViewerInner({
               bond={bond}
               atomMap={atomMap}
               renderMode={renderMode}
-              selectedAtomId={selectedAtomId}
               measuredFrom={bondDistance?.from ?? null}
               measuredTo={bondDistance?.to ?? null}
             />

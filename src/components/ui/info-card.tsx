@@ -19,15 +19,15 @@ export function InfoCard({
 }: InfoCardProps) {
   const variantStyles = {
     default: 'border-border',
-    success: 'border-green-500/50 bg-green-500/5',
-    warning: 'border-amber-500/50 bg-amber-500/5',
-    error: 'border-red-500/50 bg-red-500/5'
+    success: 'border-emerald-500/40 bg-emerald-500/5',
+    warning: 'border-amber-500/40 bg-amber-500/5',
+    error: 'border-destructive/40 bg-destructive/5'
   };
 
   return (
     <div
       className={cn(
-        'rounded-lg border p-3 text-center',
+        'rounded-xl border p-4 text-center',
         variantStyles[variant],
         highlighted && 'ring-2 ring-primary ring-offset-2',
         className
@@ -36,7 +36,7 @@ export function InfoCard({
     >
       {label && <div className="text-xs text-muted-foreground">{label}</div>}
       {value !== undefined && (
-        <div className="font-mono text-lg font-medium">
+        <div className="font-mono text-xl font-semibold">
           {value}
           {unit && <span className="ml-1 text-xs text-muted-foreground">{unit}</span>}
         </div>
