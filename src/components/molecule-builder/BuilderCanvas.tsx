@@ -350,7 +350,7 @@ export default function BuilderCanvas({
 
       {/* Empty state */}
       {atoms.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="text-center text-muted-foreground">
             <p className="text-lg font-medium">Klicke, um Atome hinzuzufügen</p>
             <p className="text-sm">Wähle ein Element aus der Palette und klicke auf die Fläche</p>

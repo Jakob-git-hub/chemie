@@ -30,11 +30,8 @@ export default function AtomBuilder() {
     store.addParticle(type);
   };
 
-  const handleRemoveParticle = (position: { x: number; y: number }) => {
-    // Determine particle type based on current selection
-    if (store.selectedParticleType !== 'electron') {
-      store.removeParticle(store.selectedParticleType);
-    }
+  const handleRemoveParticle = (type: 'proton' | 'neutron' | 'electron') => {
+    store.removeParticle(type);
   };
 
   const handleSelectParticle = (type: 'proton' | 'neutron' | 'electron') => {
