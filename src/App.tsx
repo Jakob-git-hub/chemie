@@ -9,6 +9,7 @@ import NotFound from '@/routes/not-found';
 import LessonRoute from '@/routes/lessons';
 import MoleculeBuilderPage from '@/routes/molecule-builder';
 import AtomBuilderPage from '@/routes/atom-builder';
+import ReactionSimulatorPage from '@/routes/reaction-simulator';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/lessons/:lessonId" element={<LessonRoute />} />
           <Route path="/molecule-builder" element={<MoleculeBuilderPage />} />
           <Route path="/atom-builder" element={<AtomBuilderPage />} />
+          <Route path="/reaction-simulator" element={<ReactionSimulatorPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

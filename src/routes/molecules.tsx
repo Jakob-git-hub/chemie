@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Boxes } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,33 +16,9 @@ import PageHeader from '@/components/PageHeader';
 // 3D-Modul (React-Three-Fiber) wird erst bei Bedarf geladen.
 const MoleculeViewer = lazy(() => import('@/components/MoleculeViewer'));
 
-// --- MathJax-Bootstrap (einmalig) für den Formelsatz ---
-function useMathJax() {
-  useEffect(() => {
-    if (document.getElementById('mathjax-script')) return;
-    const s = document.createElement('script');
-    s.id = 'mathjax-script';
-    s.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
-    s.async = true;
-    document.head.appendChild(s);
-  }, []);
-}
-
-function Tex({ children }: { children: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const mj = (window as any).MathJax;
-    if (mj?.typesetPromise && ref.current) {
-      mj.typesetPromise([ref.current]).catch(() => {});
-    }
-  }, [children]);
-  return <span ref={ref}>{children}</span>;
-}
-
 const EXAMPLES = ['Koffein', 'CCO', 'C6H12O6', 'Aspirin', 'Fe + O2 ->', 'CH4 + O2 ->'];
 
 export default function Molecules() {
-  useMathJax();
   const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
 
   const {
@@ -301,7 +277,9 @@ export default function Molecules() {
           </div>
 
           <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-4 text-center">
-            <Tex>{String.raw`\Delta G = \Delta H - T \cdot \Delta S`}</Tex>
+            <div className="font-serif text-lg" aria-label="Delta G gleich Delta H minus T mal Delta S">
+              ΔG = ΔH − T · ΔS
+            </div>
             <div className="font-mono text-3xl font-bold">
               {deltaG !== null ? `${deltaG.toFixed(1)} kJ/mol` : 'warte auf ΔH_R …'}
             </div>
