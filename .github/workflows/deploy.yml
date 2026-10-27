@@ -35,6 +35,15 @@ jobs:
       - name: Install dependencies (npm ci)
         run: npm ci
 
+      - name: Check dependencies for known vulnerabilities
+        run: npm audit --audit-level=moderate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
       - name: Build website (npm run build → docs/)
         run: npm run build
 
