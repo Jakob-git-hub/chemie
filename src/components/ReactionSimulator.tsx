@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Flame, FlaskConical, RotateCcw, Sparkles } from 'lucide-react';
+import { CloudFog, Flame, FlaskConical, RotateCcw, Sparkles, Waves } from 'lucide-react';
 import { MOLECULES } from '@/data/molecules';
 import { simulateReaction, type ReactionResult } from '@/lib/reactions';
 import type { Molecule } from '@/lib/types';
@@ -12,6 +12,7 @@ export default function ReactionSimulator() {
   const [selected, setSelected] = useState<Molecule[]>([]);
   const [result, setResult] = useState<ReactionResult | null>(null);
   const [isReacting, setIsReacting] = useState(false);
+  const [activeEffect, setActiveEffect] = useState<ReactionResult['effect'] | null>(null);
 
   const available = useMemo(
     () => [
@@ -30,10 +31,12 @@ export default function ReactionSimulator() {
 
   const runReaction = () => {
     const nextResult = simulateReaction(selected);
+    setActiveEffect(nextResult?.effect ?? 'neutral');
     setIsReacting(true);
     window.setTimeout(() => {
       setResult(nextResult);
       setIsReacting(false);
+      setActiveEffect(null);
     }, 650);
   };
 
@@ -41,6 +44,7 @@ export default function ReactionSimulator() {
     setSelected([]);
     setResult(null);
     setIsReacting(false);
+    setActiveEffect(null);
   };
 
   return (
@@ -82,8 +86,10 @@ export default function ReactionSimulator() {
 
             <div
               className={cn(
-                'relative min-h-44 rounded-2xl border-2 border-dashed p-5 transition',
+                'reaction-vessel relative min-h-44 overflow-hidden rounded-2xl border-2 border-dashed p-5 transition',
                 isReacting && 'reaction-pulse border-accent bg-accent/10',
+                isReacting && activeEffect === 'gas' && 'border-sky-400 bg-sky-500/10',
+                isReacting && activeEffect === 'flame' && 'border-orange-400 bg-orange-500/10',
                 !isReacting && 'border-border bg-muted/20'
               )}
               onDragOver={(event) => event.preventDefault()}
@@ -117,8 +123,19 @@ export default function ReactionSimulator() {
               </div>
               {isReacting && (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                  <Flame className="h-12 w-12 animate-pulse text-orange-500" aria-label="Reaktion läuft" />
+                  {activeEffect === 'gas' ? (
+                    <Waves className="h-12 w-12 animate-bounce text-sky-500" aria-label="Gasentwicklung läuft" />
+                  ) : (
+                    <Flame className="h-12 w-12 animate-pulse text-orange-500" aria-label="Reaktion läuft" />
+                  )}
                 </div>
+              )}
+              {isReacting && (
+                <>
+                  <span className="reaction-bubble reaction-bubble-one" />
+                  <span className="reaction-bubble reaction-bubble-two" />
+                  <span className="reaction-smoke"><CloudFog className="h-8 w-8" /></span>
+                </>
               )}
             </div>
 
@@ -134,7 +151,12 @@ export default function ReactionSimulator() {
             </div>
 
             {result ? (
-              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5" role="status" aria-live="polite">
+              <div className={cn(
+                'rounded-2xl border p-5',
+                result.effect === 'flame' && 'border-orange-400/50 bg-orange-500/10',
+                result.effect === 'gas' && 'border-sky-400/50 bg-sky-500/10',
+                result.effect === 'neutral' && 'border-primary/30 bg-primary/5'
+              )} role="status" aria-live="polite">
                 <div className="flex items-center gap-2">
                   {result.effect === 'flame' && <Flame className="h-5 w-5 text-orange-500" aria-hidden="true" />}
                   <h3 className="font-semibold">{result.title}</h3>

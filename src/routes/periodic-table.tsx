@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, Grid3x3, Atom } from 'lucide-react';
+import { Search, Grid3x3, Atom, Crown, Sparkles } from 'lucide-react';
 import {
   CATEGORIES,
   ELEMENTS,
@@ -73,6 +73,26 @@ export default function PeriodicTable() {
         icon={<Atom className="h-5 w-5" />}
       />
       <div className="space-y-6">
+      <section className="surface-panel overflow-hidden border-primary/20 bg-primary/5 p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+              <Crown className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="eyebrow">Neue Saison</p>
+              <h2 className="mt-1 text-xl font-bold tracking-tight">The Periodic Realm</h2>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Öffne ein Element, lerne seine Charakter-Stats kennen und schalte mit jeder richtigen Antwort neue XP frei.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-background/70 px-3 py-2 text-sm font-semibold">
+            <Sparkles className="h-4 w-4 text-accent" />
+            Lern-XP: bereit
+          </div>
+        </div>
+      </section>
       {/* Toolbar */}
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card/70 p-4 shadow-sm backdrop-blur">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
