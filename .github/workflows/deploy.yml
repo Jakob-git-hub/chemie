@@ -16,11 +16,10 @@ concurrency:
   cancel-in-progress: true   # Stellt laufende Deploy-Aktionen ein
 
 jobs:
-  # ── 1. BUILD ───────────────────────────────────────────────
-  # Baut die Seite komplett in CI (npm ci + npm run build → docs/).
-  # Ein lokaler Build vor dem Commit ist NICHT nötig – docs/ ist in
-  # .gitignore und wird nicht ins Repo committet.
-  build:
+  # ── 1. TEST ────────────────────────────────────────────────
+  # Tests und Typprüfung müssen erfolgreich sein, bevor gebaut oder
+  # veröffentlicht wird.
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -44,6 +43,24 @@ jobs:
       - name: Run tests
         run: npm test
 
+  # ── 2. BUILD ───────────────────────────────────────────────
+  # Baut die Seite erst nach erfolgreicher automatischer Testung.
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies (npm ci)
+        run: npm ci
+
       - name: Build website (npm run build → docs/)
         run: npm run build
 
@@ -52,7 +69,7 @@ jobs:
         with:
           path: docs
 
-  # ── 2. DEPLOY ──────────────────────────────────────────────
+  # ── 3. DEPLOY ──────────────────────────────────────────────
   # Wird erst nach erfolgreichem Build ausgeführt und veröffentlicht
   # das Artefakt auf GitHub Pages.
   deploy:
